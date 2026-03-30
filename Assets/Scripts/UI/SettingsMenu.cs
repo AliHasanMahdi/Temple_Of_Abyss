@@ -4,17 +4,29 @@ using TMPro;
 
 public class SettingsMenu : MonoBehaviour
 {
+    [Header("Audio")]
     public Slider musicSlider;
     public Slider sfxSlider;
+
+    [Header("Display")]
     public TMP_Dropdown resolutionDropdown;
+    public Toggle fullscreenToggle;
+
+    [Header("Close Button")]
+    public Button closeButton;
 
     private Resolution[] resolutions;
 
     void Start()
     {
-        // Load saved volume settings
+        // Load saved settings
         musicSlider.value = PlayerPrefs.GetFloat("MusicVolume", 1f);
         sfxSlider.value = PlayerPrefs.GetFloat("SFXVolume", 1f);
+
+        // Load fullscreen setting
+        bool isFullscreen = PlayerPrefs.GetInt("Fullscreen", 1) == 1;
+        fullscreenToggle.isOn = isFullscreen;
+        Screen.fullScreen = isFullscreen;
 
         // Fill resolution dropdown
         resolutions = Screen.resolutions;
@@ -36,6 +48,12 @@ public class SettingsMenu : MonoBehaviour
         resolutionDropdown.AddOptions(options);
         resolutionDropdown.value = currentIndex;
         resolutionDropdown.RefreshShownValue();
+
+        // Connect close button
+        closeButton.onClick.AddListener(CloseSettings);
+
+        // Connect fullscreen toggle
+        fullscreenToggle.onValueChanged.AddListener(ToggleFullscreen);
     }
 
     public void SetMusicVolume(float volume)
@@ -57,5 +75,14 @@ public class SettingsMenu : MonoBehaviour
     public void ToggleFullscreen(bool isFullscreen)
     {
         Screen.fullScreen = isFullscreen;
+        PlayerPrefs.SetInt("Fullscreen", isFullscreen ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    public void CloseSettings()
+    {
+        // Save all settings before closing
+        PlayerPrefs.Save();
+        gameObject.SetActive(false);
     }
 }
