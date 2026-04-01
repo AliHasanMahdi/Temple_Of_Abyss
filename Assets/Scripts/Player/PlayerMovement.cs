@@ -17,12 +17,24 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 velocity;
     private float xRotation = 0f;
     private bool isGrounded;
+    private bool jumpPressed = false;
+
+    // Crouch
+    private float originalHeight;
+    private float crouchHeight = 1f;
+    private Vector3 originalCameraPos;
+    private Vector3 crouchCameraPos = new Vector3(0, 0.2f, 0);
+    private bool isCrouching = false;
 
     void Start()
     {
         controller = GetComponent<CharacterController>();
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        // Save original values for crouch
+        originalHeight = controller.height;
+        originalCameraPos = playerCamera.localPosition;
     }
 
     void Update()
@@ -30,6 +42,11 @@ public class PlayerMovement : MonoBehaviour
         HandleLook();
         HandleMovement();
         HandleGravity();
+        HandleCrouch();
+
+        // Capture jump in Update so it never gets missed
+        if (Keyboard.current.spaceKey.wasPressedThisFrame)
+            jumpPressed = true;
     }
 
     void HandleLook()
@@ -46,15 +63,19 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleMovement()
     {
-        Vector2 moveInput = new Vector2(
-            Keyboard.current.dKey.isPressed ? 1 : Keyboard.current.aKey.isPressed ? -1 : 0,
-            Keyboard.current.wKey.isPressed ? 1 : Keyboard.current.sKey.isPressed ? -1 : 0
-        );
+        float moveX = 0f;
+        float moveZ = 0f;
 
-        bool isRunning = Keyboard.current.leftShiftKey.isPressed;
-        float speed = isRunning ? runSpeed : walkSpeed;
+        if (Keyboard.current.dKey.isPressed) moveX = 1f;
+        if (Keyboard.current.aKey.isPressed) moveX = -1f;
+        if (Keyboard.current.wKey.isPressed) moveZ = 1f;
+        if (Keyboard.current.sKey.isPressed) moveZ = -1f;
 
-        Vector3 move = transform.right * moveInput.x + transform.forward * moveInput.y;
+        // Slower when crouching
+        float speed = isCrouching ? walkSpeed * 0.5f :
+                      Keyboard.current.leftShiftKey.isPressed ? runSpeed : walkSpeed;
+
+        Vector3 move = transform.right * moveX + transform.forward * moveZ;
         controller.Move(move * speed * Time.deltaTime);
     }
 
@@ -65,10 +86,40 @@ public class PlayerMovement : MonoBehaviour
         if (isGrounded && velocity.y < 0)
             velocity.y = -2f;
 
-        if (Keyboard.current.spaceKey.wasPressedThisFrame && isGrounded)
+        // Use the jumpPressed flag instead of wasPressedThisFrame
+        if (jumpPressed && isGrounded && !isCrouching)
+        {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            jumpPressed = false;
+        }
+        else
+        {
+            jumpPressed = false;
+        }
 
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+    }
+
+    void HandleCrouch()
+    {
+        // Press C to crouch, release C to stand
+        if (Keyboard.current.cKey.wasPressedThisFrame)
+        {
+            isCrouching = true;
+            controller.height = crouchHeight;
+            playerCamera.localPosition = crouchCameraPos;
+        }
+
+        if (Keyboard.current.cKey.wasReleasedThisFrame)
+        {
+            // Check there is space above before standing up
+            if (!Physics.Raycast(transform.position, Vector3.up, originalHeight))
+            {
+                isCrouching = false;
+                controller.height = originalHeight;
+                playerCamera.localPosition = originalCameraPos;
+            }
+        }
     }
 }
