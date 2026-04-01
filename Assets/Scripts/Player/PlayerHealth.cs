@@ -9,12 +9,14 @@ public class PlayerHealth : MonoBehaviour
     void Start()
     {
         currentHealth = maxHealth;
+        UpdateHUD();
     }
 
     public void TakeDamage(float amount)
     {
         currentHealth -= amount;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+        UpdateHUD();
 
         if (currentHealth <= 0)
             Die();
@@ -24,6 +26,15 @@ public class PlayerHealth : MonoBehaviour
     {
         currentHealth += amount;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+        UpdateHUD();
+    }
+
+    void UpdateHUD()
+    {
+        if (HUDManager.Instance != null)
+            HUDManager.Instance.UpdateHealth(currentHealth, maxHealth);
+        else
+            Debug.LogWarning("HUDManager not found in scene!");
     }
 
     void Die()

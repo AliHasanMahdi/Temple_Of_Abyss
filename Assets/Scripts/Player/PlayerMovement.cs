@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -20,8 +21,6 @@ public class PlayerMovement : MonoBehaviour
     void Start()
     {
         controller = GetComponent<CharacterController>();
-
-        // Lock and hide the cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -31,62 +30,44 @@ public class PlayerMovement : MonoBehaviour
         HandleLook();
         HandleMovement();
         HandleGravity();
-
-        if (Input.GetKeyDown(KeyCode.C))
-        {
-            controller.height = 1f;
-            playerCamera.localPosition = new Vector3(0, 0.2f, 0);
-        }
-        if (Input.GetKeyUp(KeyCode.C))
-        {
-            controller.height = 2f;
-            playerCamera.localPosition = new Vector3(0, 0.7f, 0);
-        }
     }
 
     void HandleLook()
     {
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+        Vector2 mouseDelta = Mouse.current.delta.ReadValue();
+        float mouseX = mouseDelta.x * mouseSensitivity * Time.deltaTime;
+        float mouseY = mouseDelta.y * mouseSensitivity * Time.deltaTime;
 
-        // Rotate camera up and down
         xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -80f, 80f); // prevent over-rotation
+        xRotation = Mathf.Clamp(xRotation, -80f, 80f);
         playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
-
-        // Rotate player left and right
         transform.Rotate(Vector3.up * mouseX);
     }
 
     void HandleMovement()
     {
-        float moveX = Input.GetAxis("Horizontal"); // A and D
-        float moveZ = Input.GetAxis("Vertical");   // W and S
+        Vector2 moveInput = new Vector2(
+            Keyboard.current.dKey.isPressed ? 1 : Keyboard.current.aKey.isPressed ? -1 : 0,
+            Keyboard.current.wKey.isPressed ? 1 : Keyboard.current.sKey.isPressed ? -1 : 0
+        );
 
-        // Check if running
-        float speed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
+        bool isRunning = Keyboard.current.leftShiftKey.isPressed;
+        float speed = isRunning ? runSpeed : walkSpeed;
 
-        Vector3 move = transform.right * moveX + transform.forward * moveZ;
+        Vector3 move = transform.right * moveInput.x + transform.forward * moveInput.y;
         controller.Move(move * speed * Time.deltaTime);
     }
 
     void HandleGravity()
     {
-        // Check if player is on the ground
         isGrounded = controller.isGrounded;
 
         if (isGrounded && velocity.y < 0)
-        {
-            velocity.y = -2f; // small downward force to keep grounded
-        }
+            velocity.y = -2f;
 
-        // Jump
-        if (Input.GetButtonDown("Jump") && isGrounded)
-        {
+        if (Keyboard.current.spaceKey.wasPressedThisFrame && isGrounded)
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-        }
 
-        // Apply gravity
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
     }
