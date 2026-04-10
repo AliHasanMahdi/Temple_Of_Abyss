@@ -4,7 +4,7 @@
 PlayerSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 28
-  productGUID: 56f4a438e7d50704988dab0f64835f9f
+  productGUID: 660ff387aea285c4eac0d4a8d380fb9f
   AndroidProfiler: 0
   AndroidFilterTouchesWhenObscured: 0
   AndroidEnableSustainedPerformanceMode: 0
@@ -13,7 +13,7 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: DefaultCompany
-  productName: TempleOfAbyss
+  productName: Temple of Abyss inventory system
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -846,14 +846,14 @@ PlayerSettings:
   editorAssembliesCompatibilityLevel: 1
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: TempleOfAbyss
+  metroPackageName: Temple of Abyss inventory system
   metroPackageVersion: 
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: TempleOfAbyss
+  metroApplicationDescription: Temple of Abyss inventory system
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
@@ -924,11 +924,11 @@ PlayerSettings:
   captureStartupLogs: {}
   activeInputHandler: 2
   windowsGamepadBackendHint: 0
-  cloudProjectId: 02b4b07e-6fdd-4b7d-a069-1ac8160cae3b
+  cloudProjectId: f0b88ec8-b4fd-414c-9e00-1b973516f402
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: TempleOfAbyss
-  organizationId: alilhsngmcm00
+  projectName: Temple of Abyss inventory system
+  organizationId: ns_22098
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}
