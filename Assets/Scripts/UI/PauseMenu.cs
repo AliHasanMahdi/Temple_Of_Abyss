@@ -1,10 +1,12 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using TMPro;
 
 public class PauseMenu : MonoBehaviour
 {
+    public static PauseMenu Instance { get; private set; }
+
     [Header("Panels")]
     public GameObject pauseMenuPanel;
     public GameObject settingsPanel;
@@ -15,53 +17,102 @@ public class PauseMenu : MonoBehaviour
     public Button restartButton;
     public Button mainMenuButton;
 
-    private bool isPaused = false;
+    public bool IsPaused => isPaused;
+
+    private bool isPaused;
+    private bool listenersBound;
+
+    void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        EnsureReferences();
+    }
 
     void Start()
     {
-        // Make sure pause menu is hidden at start
-        pauseMenuPanel.SetActive(false);
+        if (pauseMenuPanel != null)
+            pauseMenuPanel.SetActive(false);
 
-        // Connect buttons
-        resumeButton.onClick.AddListener(Resume);
-        settingsButton.onClick.AddListener(ShowSettings);
-        restartButton.onClick.AddListener(RestartLevel);
-        mainMenuButton.onClick.AddListener(GoToMainMenu);
+        if (settingsPanel != null)
+            settingsPanel.SetActive(false);
+
+        BindButtons();
     }
 
     void Update()
     {
-        // Press Escape to toggle pause
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            if (isPaused)
-                Resume();
-            else
-                Pause();
-        }
+        if (Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame)
+            return;
+
+        if (isPaused)
+            Resume();
+        else
+            Pause();
+    }
+
+    void EnsureReferences()
+    {
+        pauseMenuPanel ??= GameObject.Find("PauseMenuPanel");
+        settingsPanel ??= GameObject.Find("SettingsPanel");
+        resumeButton ??= FindButton("ResumeButton");
+        settingsButton ??= FindButton("SettingsButton");
+        restartButton ??= FindButton("RestartButton");
+        mainMenuButton ??= FindButton("MainMenuButton");
+    }
+
+    Button FindButton(string objectName)
+    {
+        GameObject target = GameObject.Find(objectName);
+        return target != null ? target.GetComponent<Button>() : null;
+    }
+
+    void BindButtons()
+    {
+        if (listenersBound)
+            return;
+
+        if (resumeButton != null)
+            resumeButton.onClick.AddListener(Resume);
+
+        if (settingsButton != null)
+            settingsButton.onClick.AddListener(ShowSettings);
+
+        if (restartButton != null)
+            restartButton.onClick.AddListener(RestartLevel);
+
+        if (mainMenuButton != null)
+            mainMenuButton.onClick.AddListener(GoToMainMenu);
+
+        listenersBound = true;
     }
 
     public void Pause()
     {
-        pauseMenuPanel.SetActive(true);
-        Time.timeScale = 0f;    // freeze the game
-        isPaused = true;
+        if (pauseMenuPanel != null)
+            pauseMenuPanel.SetActive(true);
 
-        // Unlock cursor so player can click buttons
+        Time.timeScale = 0f;
+        isPaused = true;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
 
     public void Resume()
     {
-        pauseMenuPanel.SetActive(false);
+        if (pauseMenuPanel != null)
+            pauseMenuPanel.SetActive(false);
+
         if (settingsPanel != null)
             settingsPanel.SetActive(false);
 
-        Time.timeScale = 1f;    // unfreeze the game
+        Time.timeScale = 1f;
         isPaused = false;
-
-        // Lock cursor again for gameplay
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -74,13 +125,13 @@ public class PauseMenu : MonoBehaviour
 
     public void RestartLevel()
     {
-        Time.timeScale = 1f;    // always reset timeScale before loading
+        Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     public void GoToMainMenu()
     {
-        Time.timeScale = 1f;    // always reset timeScale before loading
+        Time.timeScale = 1f;
         SceneManager.LoadScene("MainMenu");
     }
 }

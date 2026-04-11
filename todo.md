@@ -1,0 +1,10 @@
+- [x] BF001 Main Menu Screen 1.5 Hours Planned
+- [x] BF004 First-Person Camera
+- [x] BF005 PC User Input
+- [x] CH001 Basic Interaction System
+- [x] CH002 Test Scene & Minimal HUD
+- [x] CH003 Animated Player States
+- [x] CH004 Reusable Interactable Objects
+- [x] CH005 Interaction Prompt
+- [x] CH006 Sandbox Test Geometry
+- [x] QA001 Play-Mode Movement Tuning

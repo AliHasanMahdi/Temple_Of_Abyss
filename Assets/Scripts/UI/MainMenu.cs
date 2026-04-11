@@ -1,7 +1,7 @@
-﻿using UnityEngine;
+using TMPro;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using TMPro;
 
 public class MainMenu : MonoBehaviour
 {
@@ -15,25 +15,80 @@ public class MainMenu : MonoBehaviour
     public GameObject settingsPanel;
 
     [Header("Load Game Info")]
-    public TMP_Text loadGameText; // shows level name under Load button
+    public TMP_Text loadGameText;
+
+    private bool listenersBound;
+
+    void Awake()
+    {
+        EnsureSaveSystemExists();
+        EnsureReferences();
+    }
 
     void Start()
     {
+        BindButtons();
+
         if (settingsPanel != null)
             settingsPanel.SetActive(false);
 
         CheckSaveFile();
     }
 
+    void EnsureSaveSystemExists()
+    {
+        if (FindFirstObjectByType<SaveSystem>() != null)
+            return;
+
+        new GameObject("SaveSystem").AddComponent<SaveSystem>();
+    }
+
+    void EnsureReferences()
+    {
+        newGameButton ??= FindButton("NewGameButton");
+        loadGameButton ??= FindButton("LoadGameButton");
+        settingsButton ??= FindButton("SettingsButton");
+        quitButton ??= FindButton("QuitButton");
+        settingsPanel ??= GameObject.Find("SettingsPanel");
+
+        if (loadGameText == null && loadGameButton != null)
+            loadGameText = loadGameButton.GetComponentInChildren<TMP_Text>(true);
+    }
+
+    Button FindButton(string objectName)
+    {
+        GameObject target = GameObject.Find(objectName);
+        return target != null ? target.GetComponent<Button>() : null;
+    }
+
+    void BindButtons()
+    {
+        if (listenersBound)
+            return;
+
+        if (newGameButton != null)
+            newGameButton.onClick.AddListener(NewGame);
+
+        if (loadGameButton != null)
+            loadGameButton.onClick.AddListener(LoadGame);
+
+        if (settingsButton != null)
+            settingsButton.onClick.AddListener(ShowSettings);
+
+        if (quitButton != null)
+            quitButton.onClick.AddListener(QuitGame);
+
+        listenersBound = true;
+    }
+
     void CheckSaveFile()
     {
-        // Check if a save file exists
+        if (loadGameButton == null)
+            return;
+
         if (PlayerPrefs.HasKey("SavedScene"))
         {
-            // Save exists — enable Load button
             loadGameButton.interactable = true;
-
-            string savedScene = PlayerPrefs.GetString("SavedScene");
             string savedLevel = PlayerPrefs.GetString("SavedLevelName", "Unknown Level");
 
             if (loadGameText != null)
@@ -41,7 +96,6 @@ public class MainMenu : MonoBehaviour
         }
         else
         {
-            // No save — grey out Load button
             loadGameButton.interactable = false;
 
             if (loadGameText != null)
@@ -51,33 +105,33 @@ public class MainMenu : MonoBehaviour
 
     public void NewGame()
     {
-        // Clear any old save data
         PlayerPrefs.DeleteKey("SavedScene");
         PlayerPrefs.DeleteKey("SavedLevelName");
         PlayerPrefs.DeleteKey("SavedScore");
         PlayerPrefs.Save();
 
-        // Load first level
         SceneManager.LoadScene("Level01_Entrance");
     }
 
     public void LoadGame()
     {
-        if (PlayerPrefs.HasKey("SavedScene"))
-        {
-            string sceneToLoad = PlayerPrefs.GetString("SavedScene");
-            SceneManager.LoadScene(sceneToLoad);
-        }
+        if (!PlayerPrefs.HasKey("SavedScene"))
+            return;
+
+        string sceneToLoad = PlayerPrefs.GetString("SavedScene");
+        SceneManager.LoadScene(sceneToLoad);
     }
 
     public void ShowSettings()
     {
-        settingsPanel.SetActive(true);
+        if (settingsPanel != null)
+            settingsPanel.SetActive(true);
     }
 
     public void HideSettings()
     {
-        settingsPanel.SetActive(false);
+        if (settingsPanel != null)
+            settingsPanel.SetActive(false);
     }
 
     public void QuitGame()
