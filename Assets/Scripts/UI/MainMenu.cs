@@ -27,6 +27,7 @@ public class MainMenu : MonoBehaviour
 
     void Start()
     {
+        Time.timeScale = 1f;
         BindButtons();
 
         if (settingsPanel != null)

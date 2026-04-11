@@ -36,6 +36,9 @@ public class PauseMenu : MonoBehaviour
 
     void Start()
     {
+        Time.timeScale = 1f;
+        isPaused = false;
+
         if (pauseMenuPanel != null)
             pauseMenuPanel.SetActive(false);
 
@@ -47,7 +50,7 @@ public class PauseMenu : MonoBehaviour
 
     void Update()
     {
-        if (Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame)
+        if (!WasPausePressedThisFrame())
             return;
 
         if (isPaused)
@@ -133,5 +136,13 @@ public class PauseMenu : MonoBehaviour
     {
         Time.timeScale = 1f;
         SceneManager.LoadScene("MainMenu");
+    }
+
+    bool WasPausePressedThisFrame()
+    {
+        if (Keyboard.current != null)
+            return Keyboard.current.escapeKey.wasPressedThisFrame;
+
+        return Input.GetKeyDown(KeyCode.Escape);
     }
 }

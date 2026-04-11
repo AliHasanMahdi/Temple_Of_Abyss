@@ -62,11 +62,14 @@ public class PlayerMovement : MonoBehaviour
 
     void Start()
     {
+        Time.timeScale = 1f;
         controller = GetComponent<CharacterController>();
         pauseMenu = FindFirstObjectByType<PauseMenu>();
 
         EnsureFirstPersonCamera();
         EnsureBodyVisual();
+        EnsureSupportComponents();
+        PromotePlayerCamera();
 
         originalHeight = Mathf.Max(controller.height, 2f);
         targetHeight = originalHeight;
@@ -83,9 +86,6 @@ public class PlayerMovement : MonoBehaviour
         pauseMenu ??= FindFirstObjectByType<PauseMenu>();
 
         if (pauseMenu != null && pauseMenu.IsPaused)
-            return;
-
-        if (Keyboard.current == null)
             return;
 
         HandleLook();
@@ -149,14 +149,49 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    void HandleLook()
+    void EnsureSupportComponents()
     {
-        if (Mouse.current == null || playerCamera == null)
+        if (GetComponent<PlayerHealth>() == null)
+            gameObject.AddComponent<PlayerHealth>();
+
+        if (GetComponent<PlayerInteraction>() == null)
+            gameObject.AddComponent<PlayerInteraction>();
+
+        if (GetComponent<PlayerVisualAnimator>() == null)
+            gameObject.AddComponent<PlayerVisualAnimator>();
+    }
+
+    void PromotePlayerCamera()
+    {
+        if (cam == null)
             return;
 
-        Vector2 mouseDelta = Mouse.current.delta.ReadValue();
-        float mouseX = mouseDelta.x * mouseSensitivity * 0.01f;
-        float mouseY = mouseDelta.y * mouseSensitivity * 0.01f;
+        Camera[] cameras = FindObjectsByType<Camera>(FindObjectsSortMode.None);
+        foreach (Camera sceneCamera in cameras)
+        {
+            bool isPlayerCamera = sceneCamera == cam;
+            sceneCamera.enabled = isPlayerCamera;
+
+            AudioListener listener = sceneCamera.GetComponent<AudioListener>();
+            if (listener != null)
+                listener.enabled = isPlayerCamera;
+        }
+
+        cam.tag = "MainCamera";
+        cam.enabled = true;
+    }
+
+    void HandleLook()
+    {
+        if (playerCamera == null)
+            return;
+
+        Vector2 mouseDelta = ReadMouseDelta();
+        if (mouseDelta.sqrMagnitude <= 0f)
+            return;
+
+        float mouseX = mouseDelta.x;
+        float mouseY = mouseDelta.y;
 
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, -85f, 85f);
@@ -167,10 +202,11 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleMovement()
     {
-        float moveX = GetAxis(Keyboard.current.aKey, Keyboard.current.dKey, Keyboard.current.leftArrowKey, Keyboard.current.rightArrowKey);
-        float moveZ = GetAxis(Keyboard.current.sKey, Keyboard.current.wKey, Keyboard.current.downArrowKey, Keyboard.current.upArrowKey);
+        Vector2 moveInput = ReadMoveInput();
+        float moveX = moveInput.x;
+        float moveZ = moveInput.y;
 
-        bool isSprinting = Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed;
+        bool isSprinting = IsSprintPressed();
         float speed = isCrouching ? walkSpeed * 0.5f : isSprinting ? runSpeed : walkSpeed;
 
         Vector3 move = (transform.right * moveX + transform.forward * moveZ).normalized;
@@ -194,6 +230,61 @@ public class PlayerMovement : MonoBehaviour
         return value;
     }
 
+    Vector2 ReadMoveInput()
+    {
+        if (Keyboard.current != null)
+        {
+            float moveX = GetAxis(Keyboard.current.aKey, Keyboard.current.dKey, Keyboard.current.leftArrowKey, Keyboard.current.rightArrowKey);
+            float moveZ = GetAxis(Keyboard.current.sKey, Keyboard.current.wKey, Keyboard.current.downArrowKey, Keyboard.current.upArrowKey);
+            return new Vector2(moveX, moveZ);
+        }
+
+        return new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+    }
+
+    Vector2 ReadMouseDelta()
+    {
+        if (Mouse.current != null)
+        {
+            Vector2 delta = Mouse.current.delta.ReadValue();
+            return delta * mouseSensitivity * 0.01f;
+        }
+
+        return new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * mouseSensitivity;
+    }
+
+    bool WasJumpPressedThisFrame()
+    {
+        if (Keyboard.current != null)
+            return Keyboard.current.spaceKey.wasPressedThisFrame;
+
+        return Input.GetKeyDown(KeyCode.Space);
+    }
+
+    bool IsJumpHeld()
+    {
+        if (Keyboard.current != null)
+            return Keyboard.current.spaceKey.isPressed;
+
+        return Input.GetKey(KeyCode.Space);
+    }
+
+    bool IsSprintPressed()
+    {
+        if (Keyboard.current != null)
+            return Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed;
+
+        return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+    }
+
+    bool IsCrouchPressed()
+    {
+        if (Keyboard.current != null)
+            return Keyboard.current.cKey.isPressed || Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed;
+
+        return Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+    }
+
     void HandleGravity()
     {
         isGrounded = controller.isGrounded;
@@ -210,7 +301,7 @@ public class PlayerMovement : MonoBehaviour
             coyoteTimer -= Time.deltaTime;
         }
 
-        if (Keyboard.current.spaceKey.wasPressedThisFrame)
+        if (WasJumpPressedThisFrame())
             jumpBufferTimer = jumpBufferTime;
         else
             jumpBufferTimer -= Time.deltaTime;
@@ -225,7 +316,7 @@ public class PlayerMovement : MonoBehaviour
         {
             velocity.y += gravity * (fallMultiplier - 1f) * Time.deltaTime;
         }
-        else if (velocity.y > 0f && !Keyboard.current.spaceKey.isPressed)
+        else if (velocity.y > 0f && !IsJumpHeld())
         {
             velocity.y += gravity * (lowJumpMultiplier - 1f) * Time.deltaTime;
         }
@@ -236,7 +327,7 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleCrouch()
     {
-        bool crouchPressed = Keyboard.current.cKey.isPressed || Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed;
+        bool crouchPressed = IsCrouchPressed();
 
         if (crouchPressed)
         {
@@ -282,198 +373,8 @@ public class PlayerMovement : MonoBehaviour
         if (cam == null)
             return;
 
-        bool isSprinting = Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed;
+        bool isSprinting = IsSprintPressed();
         float targetFOVValue = isSprinting ? sprintFOV : normalFOV;
         cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOVValue, fovSpeed * Time.deltaTime);
-    }
-}
-
-public class PlayerInteraction : MonoBehaviour
-{
-    public float interactionRange = 4f;
-    public LayerMask interactionMask = ~0;
-
-    private PlayerMovement playerMovement;
-    private PlayerHealth playerHealth;
-    private PauseMenu pauseMenu;
-
-    void Awake()
-    {
-        playerMovement = GetComponent<PlayerMovement>();
-        playerHealth = GetComponent<PlayerHealth>();
-    }
-
-    void OnDisable()
-    {
-        if (HUDManager.Instance != null)
-            HUDManager.Instance.HideInteractionPrompt();
-    }
-
-    void Update()
-    {
-        pauseMenu ??= FindFirstObjectByType<PauseMenu>();
-
-        if (pauseMenu != null && pauseMenu.IsPaused)
-        {
-            HidePrompt();
-            return;
-        }
-
-        if (Keyboard.current == null || playerMovement == null || playerMovement.ViewTransform == null)
-        {
-            HidePrompt();
-            return;
-        }
-
-        if (playerHealth != null && playerHealth.IsDead)
-        {
-            HidePrompt();
-            return;
-        }
-
-        Interactable interactable = FindInteractable();
-        if (interactable == null || !interactable.CanInteract(gameObject))
-        {
-            HidePrompt();
-            return;
-        }
-
-        if (HUDManager.Instance != null)
-            HUDManager.Instance.ShowInteractionPrompt(interactable.GetPromptText());
-
-        if (Keyboard.current.eKey.wasPressedThisFrame)
-            interactable.Interact(gameObject);
-    }
-
-    Interactable FindInteractable()
-    {
-        Ray ray = new Ray(playerMovement.ViewTransform.position, playerMovement.ViewTransform.forward);
-        if (!Physics.Raycast(ray, out RaycastHit hit, interactionRange, interactionMask, QueryTriggerInteraction.Collide))
-            return null;
-
-        return hit.collider.GetComponentInParent<Interactable>();
-    }
-
-    void HidePrompt()
-    {
-        if (HUDManager.Instance != null)
-            HUDManager.Instance.HideInteractionPrompt();
-    }
-}
-
-public class PlayerVisualAnimator : MonoBehaviour
-{
-    enum VisualState
-    {
-        Idle,
-        Walk,
-        Run,
-        Jump,
-        Death
-    }
-
-    private PlayerMovement playerMovement;
-    private PlayerHealth playerHealth;
-    private Transform bodyVisual;
-    private Renderer bodyRenderer;
-    private Vector3 baseScale;
-    private Vector3 basePosition;
-    private Quaternion baseRotation;
-    private VisualState currentState;
-
-    void Awake()
-    {
-        playerMovement = GetComponent<PlayerMovement>();
-        playerHealth = GetComponent<PlayerHealth>();
-    }
-
-    void Update()
-    {
-        if (bodyVisual == null)
-            CacheBodyVisual();
-
-        if (bodyVisual == null || playerMovement == null)
-            return;
-
-        currentState = ResolveState();
-        AnimateState();
-    }
-
-    void CacheBodyVisual()
-    {
-        bodyVisual = transform.Find("BodyVisual");
-        if (bodyVisual == null)
-            return;
-
-        bodyRenderer = bodyVisual.GetComponent<Renderer>();
-        baseScale = bodyVisual.localScale;
-        basePosition = bodyVisual.localPosition;
-        baseRotation = bodyVisual.localRotation;
-    }
-
-    VisualState ResolveState()
-    {
-        if (playerHealth != null && playerHealth.IsDead)
-            return VisualState.Death;
-
-        if (!playerMovement.IsGrounded)
-            return VisualState.Jump;
-
-        if (playerMovement.IsRunning)
-            return VisualState.Run;
-
-        if (playerMovement.IsMoving)
-            return VisualState.Walk;
-
-        return VisualState.Idle;
-    }
-
-    void AnimateState()
-    {
-        float time = Time.time;
-
-        switch (currentState)
-        {
-            case VisualState.Idle:
-                bodyVisual.localPosition = basePosition + new Vector3(0f, Mathf.Sin(time * 1.5f) * 0.03f, 0f);
-                bodyVisual.localScale = Vector3.Lerp(bodyVisual.localScale, baseScale, 8f * Time.deltaTime);
-                bodyVisual.localRotation = Quaternion.Lerp(bodyVisual.localRotation, baseRotation, 8f * Time.deltaTime);
-                SetColor(new Color(0.72f, 0.72f, 0.78f, 1f));
-                break;
-
-            case VisualState.Walk:
-                bodyVisual.localPosition = basePosition + new Vector3(0f, Mathf.Abs(Mathf.Sin(time * 7f)) * 0.08f, 0f);
-                bodyVisual.localScale = Vector3.Lerp(bodyVisual.localScale, baseScale + new Vector3(0.03f, -0.02f, 0.03f), 8f * Time.deltaTime);
-                bodyVisual.localRotation = Quaternion.Lerp(bodyVisual.localRotation, Quaternion.Euler(0f, 0f, Mathf.Sin(time * 7f) * 3f), 10f * Time.deltaTime);
-                SetColor(new Color(0.6f, 0.76f, 0.88f, 1f));
-                break;
-
-            case VisualState.Run:
-                bodyVisual.localPosition = basePosition + new Vector3(0f, Mathf.Abs(Mathf.Sin(time * 10f)) * 0.12f, 0f);
-                bodyVisual.localScale = Vector3.Lerp(bodyVisual.localScale, baseScale + new Vector3(0.05f, -0.05f, 0.05f), 10f * Time.deltaTime);
-                bodyVisual.localRotation = Quaternion.Lerp(bodyVisual.localRotation, Quaternion.Euler(0f, 0f, Mathf.Sin(time * 10f) * 6f), 12f * Time.deltaTime);
-                SetColor(new Color(0.9f, 0.66f, 0.3f, 1f));
-                break;
-
-            case VisualState.Jump:
-                bodyVisual.localPosition = Vector3.Lerp(bodyVisual.localPosition, basePosition + new Vector3(0f, 0.08f, 0f), 8f * Time.deltaTime);
-                bodyVisual.localScale = Vector3.Lerp(bodyVisual.localScale, baseScale + new Vector3(-0.08f, 0.12f, -0.08f), 8f * Time.deltaTime);
-                bodyVisual.localRotation = Quaternion.Lerp(bodyVisual.localRotation, Quaternion.Euler(-10f, 0f, 0f), 8f * Time.deltaTime);
-                SetColor(new Color(0.48f, 0.9f, 0.74f, 1f));
-                break;
-
-            case VisualState.Death:
-                bodyVisual.localPosition = Vector3.Lerp(bodyVisual.localPosition, basePosition + new Vector3(0f, -0.5f, 0f), 4f * Time.deltaTime);
-                bodyVisual.localScale = Vector3.Lerp(bodyVisual.localScale, baseScale, 4f * Time.deltaTime);
-                bodyVisual.localRotation = Quaternion.Lerp(bodyVisual.localRotation, Quaternion.Euler(0f, 0f, 90f), 4f * Time.deltaTime);
-                SetColor(new Color(0.24f, 0.12f, 0.12f, 1f));
-                break;
-        }
-    }
-
-    void SetColor(Color color)
-    {
-        if (bodyRenderer != null)
-            bodyRenderer.material.color = color;
     }
 }

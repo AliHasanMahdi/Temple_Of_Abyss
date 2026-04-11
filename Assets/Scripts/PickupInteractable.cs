@@ -23,6 +23,6 @@ public class PickupInteractable : Interactable
                 playerHealth.Heal(amount);
         }
 
-        gameObject.SetActive(false);
+        Destroy(gameObject);
     }
 }
