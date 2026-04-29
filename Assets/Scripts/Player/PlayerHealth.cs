@@ -37,6 +37,17 @@ public class PlayerHealth : MonoBehaviour
             Debug.LogWarning("HUDManager not found in scene!");
     }
 
+    public void InstantKill()
+    {
+        currentHealth = 0;
+
+        // Update HUD to show 0 health
+        if (HUDManager.Instance != null)
+            HUDManager.Instance.UpdateHealth(0, maxHealth);
+
+        Die();
+    }
+
     void Die()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);

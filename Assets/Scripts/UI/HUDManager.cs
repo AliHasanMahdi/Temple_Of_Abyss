@@ -9,6 +9,7 @@ public class HUDManager : MonoBehaviour
     public Slider healthBar;
     public TMP_Text scoreText;
     public TMP_Text checkpointText;
+    public TMP_Text interactPromptText;
 
     private int score = 0;
 
@@ -17,20 +18,44 @@ public class HUDManager : MonoBehaviour
         Instance = this;
     }
 
+    void Start()
+    {
+        // Hide prompt at start
+        if (interactPromptText != null)
+            interactPromptText.gameObject.SetActive(false);
+    }
+
     public void UpdateHealth(float current, float max)
     {
-        healthBar.value = (current / max) * 100f;
+        if (healthBar != null)
+            healthBar.value = (current / max) * 100f;
     }
 
     public void AddScore(int amount)
     {
         score += amount;
-        scoreText.text = "Score: " + score;
+        if (scoreText != null)
+            scoreText.text = "Score: " + score;
     }
 
     public int GetScore()
     {
         return score;
+    }
+
+    public void ShowInteractPrompt(string message)
+    {
+        if (interactPromptText != null)
+        {
+            interactPromptText.text = message;
+            interactPromptText.gameObject.SetActive(true);
+        }
+    }
+
+    public void HideInteractPrompt()
+    {
+        if (interactPromptText != null)
+            interactPromptText.gameObject.SetActive(false);
     }
 
     public void ShowCheckpointMessage()
@@ -40,9 +65,12 @@ public class HUDManager : MonoBehaviour
 
     System.Collections.IEnumerator ShowMessage()
     {
-        checkpointText.text = "Checkpoint Reached!";
-        checkpointText.gameObject.SetActive(true);
-        yield return new WaitForSeconds(2f);
-        checkpointText.gameObject.SetActive(false);
+        if (checkpointText != null)
+        {
+            checkpointText.text = "Checkpoint Reached!";
+            checkpointText.gameObject.SetActive(true);
+            yield return new WaitForSeconds(2f);
+            checkpointText.gameObject.SetActive(false);
+        }
     }
 }
