@@ -58,7 +58,7 @@ public class MainMenu : MonoBehaviour
         PlayerPrefs.Save();
 
         // Load first level
-        SceneManager.LoadScene("Level01_Entrance");
+        SceneManager.LoadScene("Level01");
     }
 
     public void LoadGame()
