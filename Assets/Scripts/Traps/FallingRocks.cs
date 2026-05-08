@@ -3,9 +3,9 @@ using UnityEngine;
 public class FallingRocks : MonoBehaviour
 {
     public GameObject rockPrefab;
-    public float spawnInterval = 1.5f;  // how often a rock falls
+    public float spawnInterval = 1.5f;  
     public float damage = 40f;
-    public float spawnRadius = 2f;      // random spread of rocks
+    public float spawnRadius = 2f;      
 
     private float timer = 0f;
 
@@ -37,18 +37,3 @@ public class FallingRocks : MonoBehaviour
     }
 }
 
-// Attach this separately to the rock prefab itself
-public class RockDamage : MonoBehaviour
-{
-    public float damage = 40f;
-
-    void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Player"))
-        {
-            PlayerHealth health = collision.gameObject.GetComponent<PlayerHealth>();
-            if (health != null)
-                health.TakeDamage(damage);
-        }
-    }
-}

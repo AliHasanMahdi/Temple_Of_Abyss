@@ -37,7 +37,10 @@ public class RollingBoulder : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Player"))
         {
-            PlayerHealth health = collision.gameObject.GetComponent<PlayerHealth>();
+            PlayerHealth health = collision.gameObject.GetComponent<PlayerHealth>()
+                               ?? collision.gameObject.GetComponentInParent<PlayerHealth>()
+                               ?? collision.gameObject.GetComponentInChildren<PlayerHealth>();
+
             if (health != null)
                 health.TakeDamage(damage);
         }

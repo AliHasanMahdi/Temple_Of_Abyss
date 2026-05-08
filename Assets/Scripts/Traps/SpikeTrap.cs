@@ -52,8 +52,10 @@ public class SpikeTrap : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            // Damage the player
-            PlayerHealth health = other.GetComponent<PlayerHealth>();
+            PlayerHealth health = other.GetComponent<PlayerHealth>()
+                               ?? other.GetComponentInParent<PlayerHealth>()
+                               ?? other.GetComponentInChildren<PlayerHealth>();
+
             if (health != null)
                 health.TakeDamage(damage);
         }

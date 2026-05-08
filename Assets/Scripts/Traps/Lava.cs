@@ -10,7 +10,10 @@ public class Lava : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            PlayerHealth health = other.GetComponent<PlayerHealth>();
+            PlayerHealth health = other.GetComponent<PlayerHealth>()
+                               ?? other.GetComponentInParent<PlayerHealth>()
+                               ?? other.GetComponentInChildren<PlayerHealth>();
+
             if (health != null)
             {
                 if (instantKill)

@@ -186,10 +186,9 @@ public class EnemyAI : MonoBehaviour
     void HandleChase()
     {
         agent.speed = chaseSpeed;
-        agent.SetDestination(player.position);
 
-        // Deal damage when close enough
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+
         if (distanceToPlayer > damageRange)
         {
             agent.isStopped = false;
@@ -197,7 +196,6 @@ public class EnemyAI : MonoBehaviour
         }
         else
         {
-            // Stop moving and attack
             agent.isStopped = true;
 
             damageTimer += Time.deltaTime;
@@ -205,21 +203,19 @@ public class EnemyAI : MonoBehaviour
             {
                 damageTimer = 0f;
                 TriggerAttack();
+                Debug.Log("Distance to player: " + distanceToPlayer + " damage range: " + damageRange);
             }
         }
 
-        // Lost sight of player
         if (!canSeePlayer)
         {
             lostSightTimer += Time.deltaTime;
 
-            // Keep chasing for lostSightDelay seconds
-            // then give up if player left room
             if (lostSightTimer >= lostSightDelay)
             {
                 if (!playerInRoom)
                 {
-                    // Player left room — return to patrol
+                    agent.isStopped = false;
                     currentState = State.Returning;
                     ReturnToPatrol();
 
@@ -228,24 +224,39 @@ public class EnemyAI : MonoBehaviour
                 }
                 else
                 {
-                    // Player still in room but hidden
-                    // Keep searching — go to last known position
+                    agent.isStopped = false;
                     agent.SetDestination(player.position);
                 }
             }
         }
         else
         {
-            // Reset lost sight timer when player visible again
             lostSightTimer = 0f;
         }
     }
 
     void TriggerAttack()
     {
+        // Try getting health directly from player transform
         PlayerHealth health = player.GetComponent<PlayerHealth>();
+
+        // If not found try parent
+        if (health == null)
+            health = player.GetComponentInParent<PlayerHealth>();
+
+        // If still not found search whole scene
+        if (health == null)
+            health = FindObjectOfType<PlayerHealth>();
+
         if (health != null)
+        {
             health.TakeDamage(damage);
+            Debug.Log("Enemy dealt " + damage + " damage to player!");
+        }
+        else
+        {
+            Debug.LogWarning("PlayerHealth not found!");
+        }
 
         if (animator != null)
         {
