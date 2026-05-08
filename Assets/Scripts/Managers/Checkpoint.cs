@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class Checkpoint : MonoBehaviour
 {
@@ -10,7 +10,7 @@ public class Checkpoint : MonoBehaviour
         {
             isActivated = true;
 
-            // Save the game
+            // Save everything — scene, position, inventory, score
             if (SaveSystem.Instance != null)
                 SaveSystem.Instance.SaveGame();
 
@@ -18,8 +18,10 @@ public class Checkpoint : MonoBehaviour
             if (HUDManager.Instance != null)
                 HUDManager.Instance.ShowCheckpointMessage();
 
-            // Change colour to show it's activated
-            GetComponent<Renderer>().material.color = Color.green;
+            // Change colour to green
+            Renderer r = GetComponent<Renderer>();
+            if (r != null)
+                r.material.color = Color.green;
         }
     }
 }

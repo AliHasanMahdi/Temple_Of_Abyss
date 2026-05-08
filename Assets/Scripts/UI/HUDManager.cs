@@ -63,6 +63,13 @@ public class HUDManager : MonoBehaviour
         StartCoroutine(ShowMessage());
     }
 
+    public void SetScore(int value)
+    {
+        score = value;
+        if (scoreText != null)
+            scoreText.text = "Score: " + score;
+    }
+
     System.Collections.IEnumerator ShowMessage()
     {
         if (checkpointText != null)

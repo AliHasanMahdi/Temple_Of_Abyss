@@ -73,6 +73,12 @@ public class PlayerMovement : MonoBehaviour
         targetCameraPos = originalCameraPos;
     }
 
+    void OnEnable()
+    {
+        // Re-get controller reference after respawn
+        controller = GetComponent<CharacterController>();
+    }
+
     void Update()
     {
         // Pause
@@ -108,6 +114,7 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleMovement()
     {
+        if (controller == null || !controller.enabled) return;
         float moveX = 0f;
         float moveZ = 0f;
 
@@ -127,6 +134,8 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleGravity()
     {
+        if (controller == null || !controller.enabled) return;
+
         isGrounded = controller.isGrounded;
 
         if (isGrounded)
