@@ -1,4 +1,7 @@
 using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 public class InventoryMouseController : MonoBehaviour 
 {
@@ -8,9 +11,14 @@ public class InventoryMouseController : MonoBehaviour
 
     void Update() 
     {
-        if (Input.GetMouseButtonDown(0)) 
+        if (Camera.main == null)
         {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            return;
+        }
+
+        if (WasLeftMousePressed()) 
+        {
+            Ray ray = Camera.main.ScreenPointToRay(GetMousePosition());
             if (Physics.Raycast(ray, out RaycastHit hit)) 
             {
                 selectedItem = hit.transform.GetComponentInParent<InventoryItem>();
@@ -26,13 +34,13 @@ public class InventoryMouseController : MonoBehaviour
 
         if (selectedItem != null) 
         {
-            Vector3 mousePos = Input.mousePosition;
+            Vector3 mousePos = GetMousePosition();
             mousePos.z = holdDistance;
             selectedItem.transform.position = Camera.main.ScreenToWorldPoint(mousePos);
 
-            if (Input.GetKeyDown(KeyCode.R)) selectedItem.Rotate();
+            if (WasRotatePressed()) selectedItem.Rotate();
 
-            if (Input.GetMouseButtonUp(0)) 
+            if (WasLeftMouseReleased()) 
             {
                 if (selectedItem.hoveredCells.Count > 0) 
                 {
@@ -40,10 +48,77 @@ public class InventoryMouseController : MonoBehaviour
                     selectedItem.transform.position += new Vector3(0, 0, -0.1f);
 
                     // NEW: Store it inside the grid!
-                    selectedItem.transform.SetParent(inventoryGridTransform);
+                    if (inventoryGridTransform != null)
+                    {
+                        selectedItem.transform.SetParent(inventoryGridTransform);
+                    }
                 }
                 selectedItem = null;
             }
         }
+    }
+
+    private static Vector3 GetMousePosition()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Mouse.current != null)
+        {
+            return Mouse.current.position.ReadValue();
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.mousePosition;
+#else
+        return Vector3.zero;
+#endif
+    }
+
+    private static bool WasLeftMousePressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetMouseButtonDown(0);
+#else
+        return false;
+#endif
+    }
+
+    private static bool WasLeftMouseReleased()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame)
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetMouseButtonUp(0);
+#else
+        return false;
+#endif
+    }
+
+    private static bool WasRotatePressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetKeyDown(KeyCode.R);
+#else
+        return false;
+#endif
     }
 }

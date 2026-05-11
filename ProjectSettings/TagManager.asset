@@ -3,19 +3,15 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 3
-  tags:
-  - PlayerItem
-  - ItemAnchor
-  - Undefined
-  - InventoryCell
+  tags: []
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - PlayerBody
   - Water
   - UI
-  - 
+  - Enemy
   - 
   - 
   - 
