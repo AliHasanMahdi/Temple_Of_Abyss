@@ -1,28 +1,27 @@
 ﻿using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class AN_DoorScript : MonoBehaviour
 {
     [Header("Door Settings")]
-    [Tooltip("If it is false door can't be used")]
     public bool Locked = false;
-    [Tooltip("It is true for remote control only")]
     public bool Remote = false;
-
-    [Space]
     public bool CanOpen = true;
     public bool CanClose = true;
 
     [Header("Key Settings")]
-    [Tooltip("Door locked by red key")]
     public bool RedLocked = false;
     public bool BlueLocked = false;
+
+    [Header("Door ID — must be unique per door in the scene")]
+    [Tooltip("Give every door a unique name e.g. Door_RedLeft_01  Used to remember unlock state across death.")]
+    public string doorID = "Door_01";
 
     [Header("Animation Settings")]
     public bool isOpened = false;
     [Range(0f, 4f)]
     public float OpenSpeed = 3f;
 
-    // Internal References
     private AN_HeroInteractive HeroInteractive;
     private Rigidbody rbDoor;
     private HingeJoint hinge;
@@ -35,17 +34,27 @@ public class AN_DoorScript : MonoBehaviour
         rbDoor = GetComponent<Rigidbody>();
         hinge = GetComponent<HingeJoint>();
         mainCam = Camera.main;
-
-        // Using the faster modern method
         HeroInteractive = Object.FindAnyObjectByType<AN_HeroInteractive>();
 
         if (HeroInteractive == null)
-            Debug.LogWarning("AN_DoorScript: No Hero found in scene.");
+            Debug.LogWarning("AN_DoorScript: No AN_HeroInteractive found in scene.");
+
+        // If this door was unlocked before the player died, restore that state
+        if (SaveSystem.Instance != null && SaveSystem.Instance.IsDoorUnlocked(doorID))
+        {
+            RedLocked = false;
+            BlueLocked = false;
+            isOpened = true;
+            currentLim = 85f;
+            Debug.Log("[AN_DoorScript] Door restored as unlocked: " + doorID);
+        }
     }
 
     void Update()
     {
-        if (!Remote && Input.GetKeyDown(KeyCode.E) && NearView())
+        // New Input System
+        if (!Remote && Keyboard.current != null &&
+            Keyboard.current.eKey.wasPressedThisFrame && NearView())
         {
             Action();
         }
@@ -55,31 +64,49 @@ public class AN_DoorScript : MonoBehaviour
     {
         if (Locked) return;
 
-        // 1. Try to unlock with keys
+        // Try to unlock with keys
         if (HeroInteractive != null)
         {
             if (RedLocked && HeroInteractive.RedKey)
             {
                 RedLocked = false;
-                HeroInteractive.RedKey = false; // Key used up
-                Debug.Log("Red Door Unlocked");
+                HeroInteractive.RedKey = false;
+
+                // Save: door is now unlocked permanently (survives death)
+                if (SaveSystem.Instance != null)
+                    SaveSystem.Instance.SaveDoorUnlocked(doorID);
+
+                // Save: key is now consumed
+                if (SaveSystem.Instance != null)
+                    SaveSystem.Instance.SaveKeys();
+
+                Debug.Log("[AN_DoorScript] Red Door unlocked: " + doorID);
             }
             else if (BlueLocked && HeroInteractive.BlueKey)
             {
                 BlueLocked = false;
-                HeroInteractive.BlueKey = false; // Key used up
-                Debug.Log("Blue Door Unlocked");
+                HeroInteractive.BlueKey = false;
+
+                if (SaveSystem.Instance != null)
+                    SaveSystem.Instance.SaveDoorUnlocked(doorID);
+
+                if (SaveSystem.Instance != null)
+                    SaveSystem.Instance.SaveKeys();
+
+                Debug.Log("[AN_DoorScript] Blue Door unlocked: " + doorID);
             }
         }
 
-        // 2. If door is still locked by a key requirement, stop here
+        // Still locked — player doesn't have the right key
         if (RedLocked || BlueLocked)
         {
-            Debug.Log("Door is locked! You need a key.");
+            if (HUDManager.Instance != null)
+                HUDManager.Instance.ShowTimedMessage("You need a key!", 2f);
+            Debug.Log("[AN_DoorScript] Door locked — key required.");
             return;
         }
 
-        // 3. Handle Opening/Closing
+        // Open or close
         if (isOpened && CanClose)
         {
             isOpened = false;
@@ -94,21 +121,11 @@ public class AN_DoorScript : MonoBehaviour
     bool NearView()
     {
         if (mainCam == null) return false;
-
-        float distance = Vector3.Distance(transform.position, mainCam.transform.position);
-        // If you want to use angleView logic, uncomment the lines below:
-        // Vector3 direction = transform.position - mainCam.transform.position;
-        // float angleView = Vector3.Angle(mainCam.transform.forward, direction);
-
-        return distance < 3f;
+        return Vector3.Distance(transform.position, mainCam.transform.position) < 3f;
     }
 
-    private void FixedUpdate()
+    void FixedUpdate()
     {
-        // Target limit based on state
-        float targetLim = isOpened ? 85f : 0f;
-
-        // Smoothly move the limit toward the target
         if (isOpened)
         {
             currentLim = 85f;
@@ -121,10 +138,9 @@ public class AN_DoorScript : MonoBehaviour
                 currentLim = 0f;
         }
 
-        // Apply to Hinge
         hingeLim.max = currentLim;
         hingeLim.min = -currentLim;
         hinge.limits = hingeLim;
-        hinge.useLimits = true; // Ensure limits are actually enabled
+        hinge.useLimits = true;
     }
 }

@@ -1,6 +1,7 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections;
 
 public class HUDManager : MonoBehaviour
 {
@@ -12,6 +13,7 @@ public class HUDManager : MonoBehaviour
     public TMP_Text interactPromptText;
 
     private int score = 0;
+    private Coroutine messageCoroutine;
 
     void Awake()
     {
@@ -20,9 +22,11 @@ public class HUDManager : MonoBehaviour
 
     void Start()
     {
-        // Hide prompt at start
         if (interactPromptText != null)
             interactPromptText.gameObject.SetActive(false);
+
+        if (checkpointText != null)
+            checkpointText.gameObject.SetActive(false);
     }
 
     public void UpdateHealth(float current, float max)
@@ -38,9 +42,13 @@ public class HUDManager : MonoBehaviour
             scoreText.text = "Score: " + score;
     }
 
-    public int GetScore()
+    public int GetScore() { return score; }
+
+    public void SetScore(int value)
     {
-        return score;
+        score = value;
+        if (scoreText != null)
+            scoreText.text = "Score: " + score;
     }
 
     public void ShowInteractPrompt(string message)
@@ -58,26 +66,32 @@ public class HUDManager : MonoBehaviour
             interactPromptText.gameObject.SetActive(false);
     }
 
+    // Called by Checkpoint.cs
     public void ShowCheckpointMessage()
     {
-        StartCoroutine(ShowMessage());
+        ShowTimedMessage("Checkpoint Reached!", 2f);
     }
 
-    public void SetScore(int value)
+    // Called by AN_DoorKey.cs
+    public void ShowKeyMessage(bool isRedKey)
     {
-        score = value;
-        if (scoreText != null)
-            scoreText.text = "Score: " + score;
+        ShowTimedMessage(isRedKey ? "Red Key collected!" : "Blue Key collected!", 2f);
     }
 
-    System.Collections.IEnumerator ShowMessage()
+    // General timed message — cancels previous if still showing
+    public void ShowTimedMessage(string message, float duration)
     {
-        if (checkpointText != null)
-        {
-            checkpointText.text = "Checkpoint Reached!";
-            checkpointText.gameObject.SetActive(true);
-            yield return new WaitForSeconds(2f);
-            checkpointText.gameObject.SetActive(false);
-        }
+        if (checkpointText == null) return;
+        if (messageCoroutine != null) StopCoroutine(messageCoroutine);
+        messageCoroutine = StartCoroutine(MessageRoutine(message, duration));
+    }
+
+    IEnumerator MessageRoutine(string message, float duration)
+    {
+        checkpointText.text = message;
+        checkpointText.gameObject.SetActive(true);
+        yield return new WaitForSeconds(duration);
+        checkpointText.gameObject.SetActive(false);
+        messageCoroutine = null;
     }
 }

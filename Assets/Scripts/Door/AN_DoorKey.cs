@@ -8,6 +8,9 @@ public class AN_DoorKey : MonoBehaviour
     [Tooltip("True = Red Key,  False = Blue Key")]
     public bool isRedKey = true;
 
+    [Tooltip("Unique ID for this key — used to stop it respawning after death")]
+    public string keyID = "Key_01";
+
     [Tooltip("How close the player must be to pick up the key")]
     public float pickupRange = 2f;
 
@@ -18,7 +21,14 @@ public class AN_DoorKey : MonoBehaviour
         hero = Object.FindAnyObjectByType<AN_HeroInteractive>();
 
         if (hero == null)
-            Debug.LogError("[AN_DoorKey] No AN_HeroInteractive found in scene! " + gameObject.name + " won't work.");
+            Debug.LogError("[AN_DoorKey] No AN_HeroInteractive found! " + gameObject.name + " won't work.");
+
+        // If this key was already picked up before the player died, destroy it immediately
+        if (PlayerPrefs.GetInt("KeyPickedUp_" + keyID, 0) == 1)
+        {
+            Debug.Log("[AN_DoorKey] Key already collected, not respawning: " + keyID);
+            Destroy(gameObject);
+        }
     }
 
     void Update()
@@ -26,7 +36,6 @@ public class AN_DoorKey : MonoBehaviour
         if (hero == null) return;
         if (!InRange()) return;
 
-        // New Input System
         if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
         {
             PickUp();
@@ -35,7 +44,6 @@ public class AN_DoorKey : MonoBehaviour
 
     void PickUp()
     {
-        // Give the key to the player
         if (isRedKey)
         {
             hero.RedKey = true;
@@ -47,13 +55,17 @@ public class AN_DoorKey : MonoBehaviour
             Debug.Log("[AN_DoorKey] Blue Key picked up!");
         }
 
-        // Save keys to PlayerPrefs immediately so they survive death
+        // Mark this specific key as collected so it won't respawn after death
+        PlayerPrefs.SetInt("KeyPickedUp_" + keyID, 1);
+        PlayerPrefs.Save();
+
+        // Save key state to PlayerPrefs so it survives death
         if (SaveSystem.Instance != null)
             SaveSystem.Instance.SaveKeys();
 
-        // Show HUD message
+        // Show correct key message
         if (HUDManager.Instance != null)
-            HUDManager.Instance.ShowCheckpointMessage();
+            HUDManager.Instance.ShowKeyMessage(isRedKey);
 
         Destroy(gameObject);
     }
