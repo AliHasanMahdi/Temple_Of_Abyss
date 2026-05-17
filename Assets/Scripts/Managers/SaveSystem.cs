@@ -35,22 +35,24 @@ public class SaveSystem : MonoBehaviour
         if (player != null)
         {
             PlayerPrefs.SetFloat("SavedPosX", player.transform.position.x);
-            PlayerPrefs.SetFloat("SavedPosY", player.transform.position.y +1f);
+            PlayerPrefs.SetFloat("SavedPosY", player.transform.position.y + 1f);
             PlayerPrefs.SetFloat("SavedPosZ", player.transform.position.z);
             Debug.Log("Saved position: " + player.transform.position);
         }
 
-        // Save keys from AN_HeroInteractive
-        AN_HeroInteractive hero = FindObjectOfType<AN_HeroInteractive>();
-        if (hero != null)
-        {
-            PlayerPrefs.SetInt("SavedRedKey", hero.RedKey ? 1 : 0);
-            PlayerPrefs.SetInt("SavedBlueKey", hero.BlueKey ? 1 : 0);
-            Debug.Log("Saved keys — Red: " + hero.RedKey + " Blue: " + hero.BlueKey);
-        }
-
         PlayerPrefs.Save();
         Debug.Log("Game Saved at: " + currentScene);
+    }
+
+    public void SaveKeys()
+    {
+        AN_HeroInteractive hero = FindObjectOfType<AN_HeroInteractive>();
+        if (hero == null) return;
+
+        PlayerPrefs.SetInt("SavedRedKey", hero.RedKey ? 1 : 0);
+        PlayerPrefs.SetInt("SavedBlueKey", hero.BlueKey ? 1 : 0);
+        PlayerPrefs.Save();
+        Debug.Log("[SaveSystem] Keys saved — Red: " + hero.RedKey + "  Blue: " + hero.BlueKey);
     }
 
     public void LoadSavedPosition()
@@ -96,6 +98,7 @@ public class SaveSystem : MonoBehaviour
         {
             hero.RedKey = PlayerPrefs.GetInt("SavedRedKey", 0) == 1;
             hero.BlueKey = PlayerPrefs.GetInt("SavedBlueKey", 0) == 1;
+            Debug.Log("[SaveSystem] Restored keys — Red: " + hero.RedKey + "  Blue: " + hero.BlueKey);
         }
 
         Debug.Log("Restored position to: " + savedPos);
