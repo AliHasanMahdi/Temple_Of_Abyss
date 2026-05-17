@@ -7,7 +7,7 @@ public class HUDManager : MonoBehaviour
 {
     public static HUDManager Instance;
 
-    public Slider healthBar;
+    public Image hpFill;
     public TMP_Text scoreText;
     public TMP_Text checkpointText;
     public TMP_Text interactPromptText;
@@ -31,8 +31,8 @@ public class HUDManager : MonoBehaviour
 
     public void UpdateHealth(float current, float max)
     {
-        if (healthBar != null)
-            healthBar.value = (current / max) * 100f;
+        if (hpFill != null)
+            hpFill.fillAmount = current / max;
     }
 
     public void AddScore(int amount)
