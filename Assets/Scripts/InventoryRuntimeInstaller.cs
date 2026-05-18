@@ -4,6 +4,9 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem.UI;
 #endif
@@ -12,6 +15,8 @@ public static class InventoryRuntimeInstaller
 {
     private const int Columns = 9;
     private const int Rows = 4;
+    private const string InventoryResourcesPath = "InventoryUI/";
+    private const string GuiPartsPath = "Assets/GUI_Parts/Gui_parts/";
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Initialize()
@@ -29,6 +34,12 @@ public static class InventoryRuntimeInstaller
     private static void InstallInventory()
     {
         InventoryManager existingManager = Object.FindObjectOfType<InventoryManager>();
+        if (ShouldSkipInventory(SceneManager.GetActiveScene().name))
+        {
+            RemoveInventory(existingManager);
+            return;
+        }
+
         if (existingManager != null &&
             existingManager.inventoryUI != null &&
             existingManager.inventoryUI.GetComponentInParent<Canvas>() != null)
@@ -71,11 +82,13 @@ public static class InventoryRuntimeInstaller
         scaler.matchWidthOrHeight = 0.5f;
 
         canvasObject.AddComponent<GraphicRaycaster>();
+        InventorySprites sprites = LoadInventorySprites();
 
         GameObject dim = CreateImage("InventoryDim", canvasObject.transform, new Color(0f, 0f, 0f, 0.18f));
         StretchToParent(dim.GetComponent<RectTransform>());
 
         GameObject panel = CreateImage("InventoryPanel", canvasObject.transform, new Color(0.32f, 0.34f, 0.38f, 0.82f));
+        ConfigureImage(panel.GetComponent<Image>(), sprites.InventoryBackground, Color.white);
         RectTransform panelRect = panel.GetComponent<RectTransform>();
         panelRect.anchorMin = new Vector2(0.5f, 0.5f);
         panelRect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -83,21 +96,20 @@ public static class InventoryRuntimeInstaller
         panelRect.sizeDelta = new Vector2(940f, 608f);
         panelRect.anchoredPosition = Vector2.zero;
 
-        GameObject title = CreateText("InventoryTitle", panel.transform, "Inventory", 54, TextAlignmentOptions.Left);
-        RectTransform titleRect = title.GetComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0f, 1f);
-        titleRect.anchorMax = new Vector2(1f, 1f);
-        titleRect.pivot = new Vector2(0.5f, 1f);
-        titleRect.offsetMin = new Vector2(24f, -96f);
-        titleRect.offsetMax = new Vector2(-24f, -22f);
+        GameObject titleBar = CreateImage("InventoryTitleBar", panel.transform, new Color(0.16f, 0.13f, 0.1f, 0.9f));
+        ConfigureImage(titleBar.GetComponent<Image>(), sprites.TitleBackground, Color.white);
+        RectTransform titleBarRect = titleBar.GetComponent<RectTransform>();
+        titleBarRect.anchorMin = new Vector2(0f, 1f);
+        titleBarRect.anchorMax = new Vector2(1f, 1f);
+        titleBarRect.pivot = new Vector2(0.5f, 1f);
+        titleBarRect.offsetMin = new Vector2(50f, -116f);
+        titleBarRect.offsetMax = new Vector2(-50f, -42f);
 
-        GameObject divider = CreateImage("InventoryDivider", panel.transform, new Color(1f, 1f, 1f, 0.9f));
-        RectTransform dividerRect = divider.GetComponent<RectTransform>();
-        dividerRect.anchorMin = new Vector2(0f, 1f);
-        dividerRect.anchorMax = new Vector2(1f, 1f);
-        dividerRect.pivot = new Vector2(0.5f, 1f);
-        dividerRect.offsetMin = new Vector2(20f, -94f);
-        dividerRect.offsetMax = new Vector2(-20f, -91f);
+        GameObject title = CreateText("InventoryTitle", titleBar.transform, "Inventory", 48, TextAlignmentOptions.Center);
+        RectTransform titleRect = title.GetComponent<RectTransform>();
+        StretchToParent(titleRect);
+        titleRect.offsetMin = new Vector2(24f, 8f);
+        titleRect.offsetMax = new Vector2(-24f, -10f);
 
         GameObject grid = new GameObject("InventoryGrid", typeof(RectTransform), typeof(GridLayoutGroup));
         grid.transform.SetParent(panel.transform, false);
@@ -105,7 +117,7 @@ public static class InventoryRuntimeInstaller
         gridRect.anchorMin = new Vector2(0f, 0f);
         gridRect.anchorMax = new Vector2(1f, 1f);
         gridRect.offsetMin = new Vector2(28f, 48f);
-        gridRect.offsetMax = new Vector2(-28f, -112f);
+        gridRect.offsetMax = new Vector2(-28f, -132f);
 
         GridLayoutGroup layout = grid.GetComponent<GridLayoutGroup>();
         layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
@@ -120,7 +132,7 @@ public static class InventoryRuntimeInstaller
 
         for (int i = 0; i < Columns * Rows; i++)
         {
-            GameObject slot = CreateSlot(grid.transform);
+            GameObject slot = CreateSlot(grid.transform, sprites);
             slotIcons.Add(CreateSlotIcon(slot.transform));
             slotCounts.Add(CreateSlotCount(slot.transform));
         }
@@ -129,6 +141,35 @@ public static class InventoryRuntimeInstaller
         manager.gridGen = null;
         manager.ConfigureInventorySlots(slotIcons.ToArray(), slotCounts.ToArray(), keySprite);
         canvasObject.SetActive(false);
+    }
+
+    private static bool ShouldSkipInventory(string sceneName)
+    {
+        return sceneName == "MainMenu" || sceneName == "GameOver";
+    }
+
+    private static void RemoveInventory(InventoryManager manager)
+    {
+        if (manager == null)
+        {
+            return;
+        }
+
+        if (manager.inventoryUI != null)
+        {
+            Object.Destroy(manager.inventoryUI);
+            manager.inventoryUI = null;
+            manager.gridGen = null;
+        }
+
+        if (manager.gameObject.name == "InventorySystem")
+        {
+            Object.Destroy(manager.gameObject);
+        }
+        else
+        {
+            Object.Destroy(manager);
+        }
     }
 
     private static void EnsureEventSystem()
@@ -147,12 +188,17 @@ public static class InventoryRuntimeInstaller
 #endif
     }
 
-    private static GameObject CreateSlot(Transform parent)
+    private static GameObject CreateSlot(Transform parent, InventorySprites sprites)
     {
         GameObject slot = CreateImage("Slot", parent, new Color(0.12f, 0.15f, 0.19f, 0.38f));
-        Outline outline = slot.AddComponent<Outline>();
-        outline.effectColor = new Color(1f, 1f, 1f, 0.92f);
-        outline.effectDistance = new Vector2(2f, -2f);
+        ConfigureImage(slot.GetComponent<Image>(), sprites.CellBackground, Color.white);
+
+        GameObject frame = CreateImage("SlotFrame", slot.transform, Color.white);
+        StretchToParent(frame.GetComponent<RectTransform>());
+        Image frameImage = frame.GetComponent<Image>();
+        ConfigureImage(frameImage, sprites.CellFrame, Color.white);
+        frameImage.raycastTarget = false;
+
         return slot;
     }
 
@@ -190,6 +236,51 @@ public static class InventoryRuntimeInstaller
         Image image = obj.GetComponent<Image>();
         image.color = color;
         return obj;
+    }
+
+    private static void ConfigureImage(Image image, Sprite sprite, Color spriteColor)
+    {
+        if (image == null || sprite == null)
+        {
+            return;
+        }
+
+        image.sprite = sprite;
+        image.color = spriteColor;
+        image.type = Image.Type.Simple;
+        image.preserveAspect = false;
+    }
+
+    private static InventorySprites LoadInventorySprites()
+    {
+        return new InventorySprites
+        {
+            TitleBackground = LoadGuiSprite("name_bar2"),
+            InventoryBackground = LoadGuiSprite("barmid_ready"),
+            CellBackground = LoadGuiSprite("Mini_background"),
+            CellFrame = LoadGuiSprite("Mini_frame1")
+        };
+    }
+
+    private static Sprite LoadGuiSprite(string assetName)
+    {
+        Sprite sprite = Resources.Load<Sprite>($"{InventoryResourcesPath}{assetName}");
+        if (sprite != null)
+        {
+            return sprite;
+        }
+
+        sprite = Resources.Load<Sprite>(assetName);
+        if (sprite != null)
+        {
+            return sprite;
+        }
+
+#if UNITY_EDITOR
+        return AssetDatabase.LoadAssetAtPath<Sprite>($"{GuiPartsPath}{assetName}.png");
+#else
+        return null;
+#endif
     }
 
     private static Sprite LoadKeySprite()
@@ -242,4 +333,11 @@ public static class InventoryRuntimeInstaller
         rectTransform.offsetMax = Vector2.zero;
     }
 
+    private sealed class InventorySprites
+    {
+        public Sprite TitleBackground;
+        public Sprite InventoryBackground;
+        public Sprite CellBackground;
+        public Sprite CellFrame;
+    }
 }
