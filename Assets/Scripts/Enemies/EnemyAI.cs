@@ -29,12 +29,16 @@ public class EnemyAI : MonoBehaviour
     private NavMeshAgent agent;
     private Transform player;
     private Animator animator;
+    private Rigidbody rb;
     private int currentPatrolIndex = 0;
     private float waitTimer = 0f;
     private bool isWaiting = false;
     private float damageTimer = 0f;
     private bool playerInRoom = false;
     private bool isDead = false;
+    private float nextPlayerSearchTime = 0f;
+    private float stuckTimer = 0f;
+    private Vector3 lastPosition;
 
     // Vision
     private bool canSeePlayer = false;
@@ -45,7 +49,8 @@ public class EnemyAI : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponentInChildren<Animator>();
-        player = GameObject.FindGameObjectWithTag("Player").transform;
+        rb = GetComponent<Rigidbody>();
+        FindPlayer();
 
         // Auto find camera if not assigned
         if (enemyCamera == null)
@@ -56,34 +61,47 @@ public class EnemyAI : MonoBehaviour
         if (enemyCamera != null)
             enemyCamera.enabled = false;
 
+        if (agent == null)
+        {
+            Debug.LogWarning("EnemyAI needs a NavMeshAgent component.", this);
+            enabled = false;
+            return;
+        }
+
+        agent.autoRepath = true;
+        PrepareRigidbodyForNavMesh();
+        PlaceAgentOnNavMesh();
+        lastPosition = transform.position;
         GoToNextPatrolPoint();
+    }
+
+    void PrepareRigidbodyForNavMesh()
+    {
+        if (rb == null) return;
+
+        rb.isKinematic = true;
+        rb.useGravity = false;
     }
 
     void Update()
     {
         if (isDead) return;
 
-        if (player != null)
+        if (player == null)
+            FindPlayer();
+
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
         {
-            Vector3 directionToPlayer = player.position - transform.position;
-            float dist = directionToPlayer.magnitude;
-            float angle = Vector3.Angle(transform.forward, directionToPlayer);
-
-            RaycastHit hit;
-            Vector3 eyePos = transform.position + Vector3.up * 1.7f;
-            bool rayHit = Physics.Raycast(eyePos, directionToPlayer.normalized, out hit, visionRange);
-            string hitName = rayHit ? hit.transform.name : "Nothing";
-
-            Debug.Log("Dist: " + dist.ToString("F1")
-                    + " | Angle: " + angle.ToString("F1")
-                    + " | RayHit: " + hitName
-                    + " | State: " + currentState
-                    + " | CanSee: " + canSeePlayer);
+            PlaceAgentOnNavMesh();
+            if (agent == null) return;
+            if (!agent.isOnNavMesh) return;
         }
 
         // Check room boundary
-        if (roomBoundary != null)
+        if (roomBoundary != null && player != null)
             playerInRoom = roomBoundary.bounds.Contains(player.position);
+        else
+            playerInRoom = false;
 
         // Always check vision
         canSeePlayer = CheckVision();
@@ -105,7 +123,42 @@ public class EnemyAI : MonoBehaviour
                 break;
         }
 
+        RecoverIfStuck();
         UpdateAnimations();
+    }
+
+    void FindPlayer()
+    {
+        if (Time.time < nextPlayerSearchTime) return;
+        nextPlayerSearchTime = Time.time + 0.5f;
+
+        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+        player = playerObject != null ? playerObject.transform : null;
+    }
+
+    void PlaceAgentOnNavMesh()
+    {
+        if (agent == null) return;
+        if (agent.isOnNavMesh) return;
+
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(transform.position, out hit, 3f, agent.areaMask))
+            agent.Warp(hit.position);
+        else
+            Debug.LogWarning("Enemy is not on the NavMesh. Move it onto a baked walkable area.", this);
+    }
+
+    bool TrySetDestination(Vector3 targetPosition)
+    {
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            return false;
+
+        NavMeshHit hit;
+        if (!NavMesh.SamplePosition(targetPosition, out hit, 2f, agent.areaMask))
+            return false;
+
+        agent.isStopped = false;
+        return agent.SetDestination(hit.position);
     }
 
     // ── VISION ──────────────────────────────
@@ -157,7 +210,7 @@ public class EnemyAI : MonoBehaviour
     {
         agent.speed = patrolSpeed;
 
-        if (patrolPoints.Length == 0) return;
+        if (patrolPoints == null || patrolPoints.Length == 0) return;
 
         if (isWaiting)
         {
@@ -173,26 +226,43 @@ public class EnemyAI : MonoBehaviour
 
         if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
             isWaiting = true;
+
+        if (!agent.pathPending && agent.pathStatus == NavMeshPathStatus.PathInvalid)
+            GoToNextPatrolPoint();
     }
 
     void GoToNextPatrolPoint()
     {
-        if (patrolPoints.Length == 0) return;
-        agent.SetDestination(patrolPoints[currentPatrolIndex].position);
+        if (patrolPoints == null || patrolPoints.Length == 0) return;
+        currentPatrolIndex %= patrolPoints.Length;
+
+        if (patrolPoints[currentPatrolIndex] == null)
+        {
+            currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
+            return;
+        }
+
+        TrySetDestination(patrolPoints[currentPatrolIndex].position);
         currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
     }
 
     // ── CHASE ──────────────────────────────
     void HandleChase()
     {
+        if (player == null)
+        {
+            currentState = State.Returning;
+            ReturnToPatrol();
+            return;
+        }
+
         agent.speed = chaseSpeed;
 
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
         if (distanceToPlayer > damageRange)
         {
-            agent.isStopped = false;
-            agent.SetDestination(player.position);
+            TrySetDestination(player.position);
         }
         else
         {
@@ -224,8 +294,7 @@ public class EnemyAI : MonoBehaviour
                 }
                 else
                 {
-                    agent.isStopped = false;
-                    agent.SetDestination(player.position);
+                    TrySetDestination(player.position);
                 }
             }
         }
@@ -237,6 +306,8 @@ public class EnemyAI : MonoBehaviour
 
     void TriggerAttack()
     {
+        if (player == null) return;
+
         // Try getting health directly from player transform
         PlayerHealth health = player.GetComponent<PlayerHealth>();
 
@@ -285,22 +356,58 @@ public class EnemyAI : MonoBehaviour
 
     void ReturnToPatrol()
     {
+        if (patrolPoints == null || patrolPoints.Length == 0) return;
+
         float closestDist = Mathf.Infinity;
         int closestIndex = 0;
+        bool foundPoint = false;
 
         for (int i = 0; i < patrolPoints.Length; i++)
         {
+            if (patrolPoints[i] == null) continue;
+
             float dist = Vector3.Distance(transform.position,
                                           patrolPoints[i].position);
             if (dist < closestDist)
             {
                 closestDist = dist;
                 closestIndex = i;
+                foundPoint = true;
             }
         }
 
+        if (!foundPoint) return;
+
         currentPatrolIndex = closestIndex;
-        agent.SetDestination(patrolPoints[closestIndex].position);
+        TrySetDestination(patrolPoints[closestIndex].position);
+    }
+
+    void RecoverIfStuck()
+    {
+        if (agent == null || !agent.isOnNavMesh || agent.isStopped || isWaiting)
+        {
+            lastPosition = transform.position;
+            stuckTimer = 0f;
+            return;
+        }
+
+        bool wantsToMove = agent.hasPath && agent.remainingDistance > agent.stoppingDistance + 0.25f;
+        bool barelyMoved = Vector3.Distance(transform.position, lastPosition) < 0.02f;
+
+        if (wantsToMove && barelyMoved)
+            stuckTimer += Time.deltaTime;
+        else
+            stuckTimer = 0f;
+
+        lastPosition = transform.position;
+
+        if (stuckTimer < 1.5f) return;
+
+        stuckTimer = 0f;
+        if (currentState == State.Chasing && player != null)
+            TrySetDestination(player.position);
+        else
+            GoToNextPatrolPoint();
     }
 
     // ── ANIMATIONS ──────────────────────────
@@ -308,7 +415,7 @@ public class EnemyAI : MonoBehaviour
     {
         if (animator == null) return;
 
-        bool isMoving = agent.velocity.magnitude > 0.1f;
+        bool isMoving = agent != null && agent.velocity.magnitude > 0.1f;
         bool isChasing = currentState == State.Chasing;
 
         animator.SetBool("IsWalking", isMoving && !isChasing);
@@ -321,7 +428,8 @@ public class EnemyAI : MonoBehaviour
         if (isDead) return;
         isDead = true;
         currentState = State.Dead;
-        agent.isStopped = true;
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+            agent.isStopped = true;
 
         if (animator != null)
             animator.SetBool("IsDead", true);
