@@ -11,73 +11,71 @@ public class MainMenu : MonoBehaviour
     public Button settingsButton;
     public Button quitButton;
 
-    [Header("Panels")]
-    public GameObject settingsPanel;
-
     [Header("Load Game Info")]
-    public TMP_Text loadGameText; // shows level name under Load button
+    public TMP_Text loadGameText;
 
     void Start()
     {
-        if (settingsPanel != null)
-            settingsPanel.SetActive(false);
+        // Hide HUD when on main menu
+        if (HUDManager.Instance != null)
+            HUDManager.Instance.ShowHUD(false);
 
         CheckSaveFile();
+
+        // Connect buttons
+        if (newGameButton != null) newGameButton.onClick.AddListener(NewGame);
+        if (loadGameButton != null) loadGameButton.onClick.AddListener(LoadGame);
+        if (settingsButton != null) settingsButton.onClick.AddListener(OpenSettings);
+        if (quitButton != null) quitButton.onClick.AddListener(QuitGame);
     }
 
     void CheckSaveFile()
     {
-        // Check if a save file exists
         if (PlayerPrefs.HasKey("SavedScene"))
         {
-            // Save exists — enable Load button
-            loadGameButton.interactable = true;
-
-            string savedScene = PlayerPrefs.GetString("SavedScene");
+            if (loadGameButton != null) loadGameButton.interactable = true;
             string savedLevel = PlayerPrefs.GetString("SavedLevelName", "Unknown Level");
-
-            if (loadGameText != null)
-                loadGameText.text = "Continue: " + savedLevel;
+            if (loadGameText != null) loadGameText.text = "Continue: " + savedLevel;
         }
         else
         {
-            // No save — grey out Load button
-            loadGameButton.interactable = false;
-
-            if (loadGameText != null)
-                loadGameText.text = "No Save Found";
+            if (loadGameButton != null) loadGameButton.interactable = false;
+            if (loadGameText != null) loadGameText.text = "No Save Found";
         }
     }
 
     public void NewGame()
     {
-        // Clear any old save data
-        PlayerPrefs.DeleteKey("SavedScene");
-        PlayerPrefs.DeleteKey("SavedLevelName");
-        PlayerPrefs.DeleteKey("SavedScore");
-        PlayerPrefs.Save();
+        if (SaveSystem.Instance != null)
+            SaveSystem.Instance.DeleteSave();
 
-        // Load first level
-        SceneManager.LoadScene("Level01");
+        // Show HUD before entering game
+        if (HUDManager.Instance != null)
+            HUDManager.Instance.ShowHUD(true);
+
+        // FIXED: correct scene name
+        SceneManager.LoadScene("Level01_Entrance");
     }
 
     public void LoadGame()
     {
         if (PlayerPrefs.HasKey("SavedScene"))
         {
+            PlayerHealth.ShouldRestorePosition = true;
+
+            if (HUDManager.Instance != null)
+                HUDManager.Instance.ShowHUD(true);
+
             string sceneToLoad = PlayerPrefs.GetString("SavedScene");
             SceneManager.LoadScene(sceneToLoad);
         }
     }
 
-    public void ShowSettings()
+    public void OpenSettings()
     {
-        settingsPanel.SetActive(true);
-    }
-
-    public void HideSettings()
-    {
-        settingsPanel.SetActive(false);
+        // Works whether SettingsMenu is DontDestroyOnLoad or a panel in this scene
+        if (SettingsMenu.Instance != null)
+            SettingsMenu.Instance.Open();
     }
 
     public void QuitGame()

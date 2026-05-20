@@ -1,9 +1,11 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
 public class SettingsMenu : MonoBehaviour
 {
+    public static SettingsMenu Instance;
+
     [Header("Audio")]
     public Slider musicSlider;
     public Slider sfxSlider;
@@ -16,73 +18,103 @@ public class SettingsMenu : MonoBehaviour
     public Button closeButton;
 
     private Resolution[] resolutions;
+    public bool IsOpen => gameObject.activeSelf;
+
+    void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+        EnsureCanvas();
+    }
 
     void Start()
     {
-        // Load saved settings
-        musicSlider.value = PlayerPrefs.GetFloat("MusicVolume", 1f);
-        sfxSlider.value = PlayerPrefs.GetFloat("SFXVolume", 1f);
+        if (musicSlider != null)
+            musicSlider.value = PlayerPrefs.GetFloat("MusicVolume", 1f);
 
-        // Load fullscreen setting
-        bool isFullscreen = PlayerPrefs.GetInt("Fullscreen", 1) == 1;
-        fullscreenToggle.isOn = isFullscreen;
-        Screen.fullScreen = isFullscreen;
+        if (sfxSlider != null)
+            sfxSlider.value = PlayerPrefs.GetFloat("SFXVolume", 1f);
 
-        // Fill resolution dropdown
-        resolutions = Screen.resolutions;
-        resolutionDropdown.ClearOptions();
-
-        int currentIndex = 0;
-        var options = new System.Collections.Generic.List<string>();
-
-        for (int i = 0; i < resolutions.Length; i++)
+        if (fullscreenToggle != null)
         {
-            string option = resolutions[i].width + " x " + resolutions[i].height;
-            options.Add(option);
-
-            if (resolutions[i].width == Screen.currentResolution.width &&
-                resolutions[i].height == Screen.currentResolution.height)
-                currentIndex = i;
+            bool fs = PlayerPrefs.GetInt("Fullscreen", 1) == 1;
+            fullscreenToggle.isOn = fs;
+            Screen.fullScreen = fs;
+            fullscreenToggle.onValueChanged.AddListener(ToggleFullscreen);
         }
 
-        resolutionDropdown.AddOptions(options);
-        resolutionDropdown.value = currentIndex;
-        resolutionDropdown.RefreshShownValue();
+        if (resolutionDropdown != null)
+        {
+            resolutions = Screen.resolutions;
+            resolutionDropdown.ClearOptions();
+            var options = new System.Collections.Generic.List<string>();
+            int currentIndex = 0;
 
-        // Connect close button
-        closeButton.onClick.AddListener(CloseSettings);
+            for (int i = 0; i < resolutions.Length; i++)
+            {
+                options.Add(resolutions[i].width + " x " + resolutions[i].height);
+                if (resolutions[i].width == Screen.currentResolution.width &&
+                    resolutions[i].height == Screen.currentResolution.height)
+                    currentIndex = i;
+            }
 
-        // Connect fullscreen toggle
-        fullscreenToggle.onValueChanged.AddListener(ToggleFullscreen);
+            resolutionDropdown.AddOptions(options);
+            resolutionDropdown.value = PlayerPrefs.GetInt("Resolution", currentIndex);
+            resolutionDropdown.RefreshShownValue();
+            resolutionDropdown.onValueChanged.AddListener(SetResolution);
+        }
+
+        if (closeButton != null)
+            closeButton.onClick.AddListener(Close);
+
+        gameObject.SetActive(false);
     }
 
-    public void SetMusicVolume(float volume)
-    {
-        PlayerPrefs.SetFloat("MusicVolume", volume);
-    }
-
-    public void SetSFXVolume(float volume)
-    {
-        PlayerPrefs.SetFloat("SFXVolume", volume);
-    }
+    public void SetMusicVolume(float volume) { PlayerPrefs.SetFloat("MusicVolume", volume); }
+    public void SetSFXVolume(float volume) { PlayerPrefs.SetFloat("SFXVolume", volume); }
 
     public void SetResolution(int index)
     {
-        Resolution res = resolutions[index];
-        Screen.SetResolution(res.width, res.height, Screen.fullScreen);
+        if (resolutions == null || index >= resolutions.Length) return;
+        Resolution r = resolutions[index];
+        Screen.SetResolution(r.width, r.height, Screen.fullScreen);
+        PlayerPrefs.SetInt("Resolution", index);
     }
 
-    public void ToggleFullscreen(bool isFullscreen)
+    public void ToggleFullscreen(bool value)
     {
-        Screen.fullScreen = isFullscreen;
-        PlayerPrefs.SetInt("Fullscreen", isFullscreen ? 1 : 0);
+        Screen.fullScreen = value;
+        PlayerPrefs.SetInt("Fullscreen", value ? 1 : 0);
         PlayerPrefs.Save();
     }
 
-    public void CloseSettings()
+    public void Open()
     {
-        // Save all settings before closing
+        gameObject.SetActive(true);
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
+    public void Close()
+    {
         PlayerPrefs.Save();
         gameObject.SetActive(false);
+    }
+
+    void EnsureCanvas()
+    {
+        if (GetComponentInParent<Canvas>() != null) return;
+
+        Canvas canvas = gameObject.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 110;
+        gameObject.AddComponent<CanvasScaler>();
+        gameObject.AddComponent<GraphicRaycaster>();
     }
 }

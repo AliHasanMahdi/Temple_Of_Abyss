@@ -1,7 +1,14 @@
 fileFormatVersion: 2
-guid: 07270401c164bd545a99ed7a87b30465
+guid: f4bba1c002353fe4aa03e5f49ad4c5a0
 DefaultImporter:
   externalObjects: {}
   userData: 
   assetBundleName: 
   assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 295430
+  packageName: Dungeon Modular Pack
+  packageVersion: 1.0
+  assetPath: Assets/DungeonModularPack/Scenes/DemoScene.unity
+  uploadId: 694981

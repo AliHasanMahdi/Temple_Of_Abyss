@@ -22,6 +22,12 @@ public class FallingRocks : MonoBehaviour
 
     void SpawnRock()
     {
+        if (rockPrefab == null)
+        {
+            Debug.LogWarning("FallingRocks has no rock prefab assigned: " + name);
+            return;
+        }
+
         // Spawn rock at random position within radius
         Vector3 randomOffset = new Vector3(
             Random.Range(-spawnRadius, spawnRadius),

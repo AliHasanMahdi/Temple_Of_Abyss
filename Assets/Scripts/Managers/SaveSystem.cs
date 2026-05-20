@@ -120,6 +120,13 @@ public class SaveSystem : MonoBehaviour
         PlayerPrefs.DeleteKey("SavedPosZ");
         PlayerPrefs.DeleteKey("SavedRedKey");
         PlayerPrefs.DeleteKey("SavedBlueKey");
+
+        // Clear level progress flags so New Game really starts fresh.
+        PlayerPrefs.DeleteKey("KeyPickedUp_Key_01");
+        PlayerPrefs.DeleteKey("KeyPickedUp_Key_02");
+        PlayerPrefs.DeleteKey("Door_Door_01");
+        PlayerPrefs.DeleteKey("Door_Door_02");
+        PlayerPrefs.DeleteKey("CoinsCollected");
         PlayerPrefs.Save();
     }
 
@@ -132,7 +139,9 @@ public class SaveSystem : MonoBehaviour
     {
         switch (sceneName)
         {
-            case "Level01_Entrance": return "Level 1 - Temple Entrance";
+            case "Level01":
+            case "Level01_Entrance":
+                return "Level 1 - Temple Entrance";
             case "Level02_Corridor": return "Level 2 - Torch Corridor";
             case "Level03_Hall": return "Level 3 - Puzzle Hall";
             case "Level04_Vault": return "Level 4 - Abyss Vault";
