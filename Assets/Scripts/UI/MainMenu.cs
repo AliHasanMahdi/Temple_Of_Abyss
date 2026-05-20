@@ -55,6 +55,7 @@ public class MainMenu : MonoBehaviour
         PlayerPrefs.DeleteKey("SavedScene");
         PlayerPrefs.DeleteKey("SavedLevelName");
         PlayerPrefs.DeleteKey("SavedScore");
+        PersistentInventory.ClearAll();
         PlayerPrefs.Save();
 
         // Load first level

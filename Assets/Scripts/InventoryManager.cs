@@ -21,6 +21,7 @@ public class InventoryManager : MonoBehaviour
     private Image[] slotIcons;
     private TMP_Text[] slotCounts;
     private Sprite keySprite;
+    private Sprite questItemSprite;
     private int keyCount;
 
     void Awake()
@@ -125,6 +126,12 @@ public class InventoryManager : MonoBehaviour
         SyncKeysFromHero();
     }
 
+    public void RefreshInventory()
+    {
+        SyncKeysFromHero();
+        RefreshSlots();
+    }
+
     private void EnsureInventoryReferences()
     {
         if (inventoryUI == null)
@@ -173,6 +180,7 @@ public class InventoryManager : MonoBehaviour
             bool hasKey = i == 0 && keyCount > 0;
             icon.enabled = hasKey && keySprite != null;
             icon.sprite = hasKey ? keySprite : null;
+            icon.color = Color.white;
 
             if (slotCounts != null && i < slotCounts.Length && slotCounts[i] != null)
             {
@@ -180,6 +188,45 @@ public class InventoryManager : MonoBehaviour
                 slotCounts[i].text = hasKey ? $"{keyCount}x" : string.Empty;
             }
         }
+
+        int slotIndex = keyCount > 0 ? 1 : 0;
+        foreach (PersistentInventory.DisplayItem item in PersistentInventory.GetDisplayItems())
+        {
+            if (slotIndex >= slotIcons.Length)
+            {
+                break;
+            }
+
+            Image icon = slotIcons[slotIndex];
+            if (icon != null)
+            {
+                icon.enabled = true;
+                icon.sprite = GetQuestItemSprite();
+                icon.color = item.Color;
+            }
+
+            if (slotCounts != null && slotIndex < slotCounts.Length && slotCounts[slotIndex] != null)
+            {
+                slotCounts[slotIndex].enabled = true;
+                slotCounts[slotIndex].text = item.Label;
+            }
+
+            slotIndex++;
+        }
+    }
+
+    private Sprite GetQuestItemSprite()
+    {
+        if (questItemSprite != null)
+        {
+            return questItemSprite;
+        }
+
+        Texture2D texture = new Texture2D(1, 1);
+        texture.SetPixel(0, 0, Color.white);
+        texture.Apply();
+        questItemSprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f), 1f);
+        return questItemSprite;
     }
 
     private bool WasTogglePressed()

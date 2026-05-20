@@ -130,6 +130,7 @@ public class SaveSystem : MonoBehaviour
         PlayerPrefs.DeleteKey("SavedBlueKey");
         PlayerPrefs.DeleteKey("SavedRedKeyCount");
         PlayerPrefs.DeleteKey("SavedBlueKeyCount");
+        PersistentInventory.ClearAll();
         PlayerPrefs.Save();
     }
 
