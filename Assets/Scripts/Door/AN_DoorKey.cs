@@ -5,8 +5,14 @@ using UnityEngine.InputSystem;
 
 public class AN_DoorKey : MonoBehaviour
 {
-    [Tooltip("True = Red Key,  False = Blue Key")]
-    public bool isRedKey = true;
+    public enum KeyType
+    {
+        Red,
+        Blue
+    }
+
+    [Header("Key Settings")]
+    public KeyType keyType;
 
     [Tooltip("Unique ID for this key — used to stop it respawning after death")]
     public string keyID = "Key_01";
@@ -44,28 +50,30 @@ public class AN_DoorKey : MonoBehaviour
 
     void PickUp()
     {
-        if (isRedKey)
+        switch (keyType)
         {
-            hero.RedKey = true;
-            Debug.Log("[AN_DoorKey] Red Key picked up!");
-        }
-        else
-        {
-            hero.BlueKey = true;
-            Debug.Log("[AN_DoorKey] Blue Key picked up!");
+            case KeyType.Red:
+                hero.RedKey = true;
+                Debug.Log("[AN_DoorKey] Red Key picked up!");
+                break;
+
+            case KeyType.Blue:
+                hero.BlueKey = true;
+                Debug.Log("[AN_DoorKey] Blue Key picked up!");
+                break;
         }
 
-        // Mark this specific key as collected so it won't respawn after death
+        // Mark this specific key as collected
         PlayerPrefs.SetInt("KeyPickedUp_" + keyID, 1);
         PlayerPrefs.Save();
 
-        // Save key state to PlayerPrefs so it survives death
+        // Save key state
         if (SaveSystem.Instance != null)
             SaveSystem.Instance.SaveKeys();
 
-        // Show correct key message
+        // Show HUD message
         if (HUDManager.Instance != null)
-            HUDManager.Instance.ShowKeyMessage(isRedKey);
+            HUDManager.Instance.ShowKeyMessage(keyType == KeyType.Red);
 
         Destroy(gameObject);
     }
@@ -73,12 +81,16 @@ public class AN_DoorKey : MonoBehaviour
     bool InRange()
     {
         if (Camera.main == null) return false;
-        return Vector3.Distance(transform.position, Camera.main.transform.position) < pickupRange;
+
+        return Vector3.Distance(
+            transform.position,
+            Camera.main.transform.position
+        ) < pickupRange;
     }
 
     void OnDrawGizmosSelected()
     {
-        Gizmos.color = isRedKey ? Color.red : Color.blue;
+        Gizmos.color = keyType == KeyType.Red ? Color.red : Color.blue;
         Gizmos.DrawWireSphere(transform.position, pickupRange);
     }
 }

@@ -97,7 +97,8 @@ public class PlayerHealth : MonoBehaviour
 
     void Die()
     {
-        ShouldRestorePosition = true;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        ShouldRestorePosition = false;
+        GameOverMenu.ShowDeath(SceneManager.GetActiveScene().name);
+        SceneManager.LoadScene("GameOver");
     }
 }

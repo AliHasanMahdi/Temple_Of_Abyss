@@ -58,9 +58,9 @@ public class PauseMenu : MonoBehaviour
 
     void Update()
     {
-        // Only allow ESC pause in game levels, not on MainMenu
+        // Only allow ESC pause in game levels, not on menu screens
         string scene = SceneManager.GetActiveScene().name;
-        if (scene == "MainMenu") return;
+        if (scene == "MainMenu" || scene == "GameOver") return;
 
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {

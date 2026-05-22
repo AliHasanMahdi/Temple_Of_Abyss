@@ -43,6 +43,9 @@ public class ExitDoor : MonoBehaviour
         PlayerPrefs.SetInt("CoinsCollected", 0);
         PlayerPrefs.Save();
 
+        if (nextScene == "GameOver")
+            GameOverMenu.ShowFinish();
+
         // Load next scene
         SceneManager.LoadScene(nextScene);
     }
