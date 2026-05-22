@@ -13,6 +13,7 @@ public class HUDManager : MonoBehaviour
     public Slider healthBar;
 
     [Header("Score")]
+    public Image scoreImage;
     public TMP_Text scoreText;
 
     [Header("Messages")]
@@ -38,11 +39,13 @@ public class HUDManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
         AutoBindHealthBar();
+        AutoBindScoreImage();
     }
 
     void Start()
     {
         AutoBindHealthBar();
+        AutoBindScoreImage();
         if (interactPromptText != null) interactPromptText.gameObject.SetActive(false);
         if (interactBackground != null) interactBackground.SetActive(false);
         if (checkpointText != null) checkpointText.gameObject.SetActive(false);
@@ -63,6 +66,7 @@ public class HUDManager : MonoBehaviour
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         AutoBindHealthBar();
+        AutoBindScoreImage();
         ShowHUD(scene.name != "MainMenu");
 
         PlayerHealth playerHealth = FindObjectOfType<PlayerHealth>();
@@ -76,6 +80,7 @@ public class HUDManager : MonoBehaviour
 
         SetUIActive(healthBar != null ? healthBar.gameObject : null, show);
         SetUIActive(hpFill != null && hpFill.transform.parent != null ? hpFill.transform.parent.gameObject : null, show);
+        SetUIActive(scoreImage != null ? scoreImage.gameObject : null, show);
         SetUIActive(scoreText != null ? scoreText.gameObject : null, show);
 
         if (!show)
@@ -188,6 +193,21 @@ public class HUDManager : MonoBehaviour
 
         if (hpFill == null && healthBar != null && healthBar.fillRect != null)
             hpFill = healthBar.fillRect.GetComponent<Image>();
+    }
+
+    void AutoBindScoreImage()
+    {
+        if (scoreImage != null) return;
+
+        Image[] images = FindObjectsOfType<Image>(true);
+        foreach (Image image in images)
+        {
+            if (image.name == "ScoreImage")
+            {
+                scoreImage = image;
+                break;
+            }
+        }
     }
 
     void SetUIActive(GameObject target, bool active)

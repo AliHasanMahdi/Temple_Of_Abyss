@@ -47,7 +47,14 @@ public class EnemyHealth : MonoBehaviour
         if (agent != null) agent.enabled = false;
 
         // Death animation
-        if (anim != null) anim.SetBool("IsDead", true);
+        if (anim != null)
+        {
+            anim.SetBool("IsWalking", false);
+            anim.SetBool("IsChasing", false);
+            anim.SetBool("IsAttacking", false);
+            anim.SetBool("IsDead", true);
+            anim.CrossFade("Death", 0.1f, 0);
+        }
 
         // Disable collider
         Collider col = GetComponent<Collider>();
