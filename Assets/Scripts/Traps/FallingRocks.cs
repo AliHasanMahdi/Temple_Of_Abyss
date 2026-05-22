@@ -3,9 +3,9 @@ using UnityEngine;
 public class FallingRocks : MonoBehaviour
 {
     public GameObject rockPrefab;
-    public float spawnInterval = 1.5f;  
+    public float spawnInterval = 1.5f;
     public float damage = 40f;
-    public float spawnRadius = 2f;      
+    public float spawnRadius = 2f;
 
     private float timer = 0f;
 
@@ -42,4 +42,3 @@ public class FallingRocks : MonoBehaviour
         Destroy(rock, 5f);
     }
 }
-

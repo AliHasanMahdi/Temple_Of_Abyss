@@ -1,0 +1,64 @@
+using UnityEngine;
+
+public class EnemyHealth : MonoBehaviour
+{
+    public float maxHealth = 100f;
+    public float currentHealth;
+
+    [Header("Death")]
+    public float destroyDelay = 3f;
+
+    [Header("Room Reference")]
+    [Tooltip("Drag the EnemyRoom that owns this enemy here")]
+    public EnemyRoom enemyRoom;
+
+    private Animator anim;
+    private EnemyAI ai;
+    private bool isDead = false;
+
+    void Start()
+    {
+        currentHealth = maxHealth;
+        anim = GetComponentInChildren<Animator>();
+        ai = GetComponent<EnemyAI>();
+
+        // Auto-find room if not assigned in Inspector
+        if (enemyRoom == null)
+            enemyRoom = GetComponentInParent<EnemyRoom>();
+    }
+
+    public void TakeDamage(float amount)
+    {
+        if (isDead) return;
+        currentHealth -= amount;
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+        if (currentHealth <= 0) Die();
+    }
+
+    void Die()
+    {
+        if (isDead) return;
+        isDead = true;
+
+        // Stop AI
+        if (ai != null) ai.enabled = false;
+
+        UnityEngine.AI.NavMeshAgent agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (agent != null) agent.enabled = false;
+
+        // Death animation
+        if (anim != null) anim.SetBool("IsDead", true);
+
+        // Disable collider
+        Collider col = GetComponent<Collider>();
+        if (col != null) col.enabled = false;
+
+        // Tell the room this enemy died
+        if (enemyRoom != null)
+            enemyRoom.OnEnemyDied();
+
+        Destroy(gameObject, destroyDelay);
+    }
+
+    public bool IsDead() { return isDead; }
+}

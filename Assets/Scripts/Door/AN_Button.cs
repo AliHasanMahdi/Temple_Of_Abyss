@@ -12,6 +12,12 @@ public class AN_Button : MonoBehaviour
     public bool Locked = false;
     [Tooltip("The door for remote control")]
     public AN_DoorScript DoorObject;
+
+    [Space]
+    [Header("Spike Traps (optional)")]
+    [Tooltip("Drag any LeverSpikeTarget GameObjects here to fire them when the lever is pulled")]
+    public LeverSpikeTarget[] spikeTargets;
+
     [Space]
     [Tooltip("Any object for ramp/elevator baheviour")]
     public Transform RampObject;
@@ -50,15 +56,37 @@ public class AN_Button : MonoBehaviour
     {
         if (!Locked)
         {
-            if (Input.GetKeyDown(KeyCode.E) && !isValve && DoorObject != null && DoorObject.Remote && NearView()) // 1.lever and 2.button
+            if (Input.GetKeyDown(KeyCode.E) && !isValve && NearView()) // 1.lever and 2.button
             {
-                DoorObject.Action(); // void in door script to open/close
-                if (isLever) // animations
+                // Door logic (still works if DoorObject is assigned)
+                if (DoorObject != null && DoorObject.Remote)
                 {
-                    if (DoorObject.isOpened) anim.SetBool("LeverUp", true);
-                    else anim.SetBool("LeverUp", false);
+                    DoorObject.Action();
+                    if (isLever)
+                    {
+                        if (DoorObject.isOpened) anim.SetBool("LeverUp", true);
+                        else anim.SetBool("LeverUp", false);
+                    }
+                    else anim.SetTrigger("ButtonPress");
                 }
-                else anim.SetTrigger("ButtonPress");
+                else if (isLever)
+                {
+                    // No door assigned — just animate the lever toggle
+                    anim.SetBool("LeverUp", !anim.GetBool("LeverUp"));
+                }
+                else
+                {
+                    anim.SetTrigger("ButtonPress");
+                }
+
+                // Fire all connected spike traps
+                if (spikeTargets != null)
+                {
+                    foreach (LeverSpikeTarget spike in spikeTargets)
+                    {
+                        if (spike != null) spike.Activate();
+                    }
+                }
             }
             else if (isValve && RampObject != null) // 3.valve
             {
@@ -92,7 +120,7 @@ public class AN_Button : MonoBehaviour
 
                 // using value on object
                 transform.rotation = startQuat * Quaternion.Euler(0f, 0f, current * ValveSpeed);
-                if (xRotation) RampObject.rotation = rampQuat * Quaternion.Euler(current, 0f, 0f); // I have a doubt in working correctly
+                if (xRotation) RampObject.rotation = rampQuat * Quaternion.Euler(current, 0f, 0f);
                 else if (yPosition) RampObject.position = new Vector3(RampObject.position.x, startYPosition + current, RampObject.position.z);
             }
         }

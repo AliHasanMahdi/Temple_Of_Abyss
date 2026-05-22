@@ -13,11 +13,10 @@ public class AN_DoorScript : MonoBehaviour
     public bool RedLocked = false;
     public bool BlueLocked = false;
 
-    [Header("Door ID — must be unique per door in the scene")]
-    [Tooltip("Give every door a unique name e.g. Door_RedLeft_01  Used to remember unlock state across death.")]
+    [Header("Door ID — unique per door")]
     public string doorID = "Door_01";
 
-    [Header("Animation Settings")]
+    [Header("Animation")]
     public bool isOpened = false;
     [Range(0f, 4f)]
     public float OpenSpeed = 3f;
@@ -36,23 +35,20 @@ public class AN_DoorScript : MonoBehaviour
         mainCam = Camera.main;
         HeroInteractive = Object.FindAnyObjectByType<AN_HeroInteractive>();
 
-        if (HeroInteractive == null)
-            Debug.LogWarning("AN_DoorScript: No AN_HeroInteractive found in scene.");
-
-        // If this door was unlocked before the player died, restore that state
+        // Restore unlocked state after player death
         if (SaveSystem.Instance != null && SaveSystem.Instance.IsDoorUnlocked(doorID))
         {
+            Locked = false;
+            CanOpen = true;
             RedLocked = false;
             BlueLocked = false;
             isOpened = true;
             currentLim = 85f;
-            Debug.Log("[AN_DoorScript] Door restored as unlocked: " + doorID);
         }
     }
 
     void Update()
     {
-        // New Input System
         if (!Remote && Keyboard.current != null &&
             Keyboard.current.eKey.wasPressedThisFrame && NearView())
         {
@@ -62,7 +58,7 @@ public class AN_DoorScript : MonoBehaviour
 
     public void Action()
     {
-        if (Locked) return;
+        if (Locked || !CanOpen) return;
 
         // Try to unlock with keys
         if (HeroInteractive != null)
@@ -71,50 +67,40 @@ public class AN_DoorScript : MonoBehaviour
             {
                 RedLocked = false;
                 HeroInteractive.RedKey = false;
-
-                // Save: door is now unlocked permanently (survives death)
                 if (SaveSystem.Instance != null)
+                {
                     SaveSystem.Instance.SaveDoorUnlocked(doorID);
-
-                // Save: key is now consumed
-                if (SaveSystem.Instance != null)
                     SaveSystem.Instance.SaveKeys();
-
-                Debug.Log("[AN_DoorScript] Red Door unlocked: " + doorID);
+                }
             }
             else if (BlueLocked && HeroInteractive.BlueKey)
             {
                 BlueLocked = false;
                 HeroInteractive.BlueKey = false;
-
                 if (SaveSystem.Instance != null)
+                {
                     SaveSystem.Instance.SaveDoorUnlocked(doorID);
-
-                if (SaveSystem.Instance != null)
                     SaveSystem.Instance.SaveKeys();
-
-                Debug.Log("[AN_DoorScript] Blue Door unlocked: " + doorID);
+                }
             }
         }
 
-        // Still locked — player doesn't have the right key
+        // Still locked by key
         if (RedLocked || BlueLocked)
         {
             if (HUDManager.Instance != null)
                 HUDManager.Instance.ShowTimedMessage("You need a key!", 2f);
-            Debug.Log("[AN_DoorScript] Door locked — key required.");
             return;
         }
 
         // Open or close
         if (isOpened && CanClose)
-        {
             isOpened = false;
-        }
-        else if (!isOpened && CanOpen)
+        else if (!isOpened)
         {
             isOpened = true;
-            rbDoor.AddRelativeTorque(new Vector3(0, 0, 20f));
+            if (rbDoor != null)
+                rbDoor.AddRelativeTorque(new Vector3(0, 0, 20f));
         }
     }
 
@@ -126,17 +112,11 @@ public class AN_DoorScript : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (isOpened)
-        {
-            currentLim = 85f;
-        }
-        else
-        {
-            if (currentLim > 1f)
-                currentLim -= 0.5f * OpenSpeed;
-            else
-                currentLim = 0f;
-        }
+        if (hinge == null) return;
+
+        currentLim = isOpened
+            ? 85f
+            : Mathf.Max(0f, currentLim - 0.5f * OpenSpeed);
 
         hingeLim.max = currentLim;
         hingeLim.min = -currentLim;
