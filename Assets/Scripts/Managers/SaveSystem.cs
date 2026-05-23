@@ -8,9 +8,6 @@ public class SaveSystem : MonoBehaviour
     public static SaveSystem Instance;
 
     // ── IN-MEMORY STATE (not written to disk until checkpoint) ────
-    // These are cleared automatically on scene reload (object is DontDestroyOnLoad
-    // but the sets are re-initialised each time DeleteSave/LoadSavedPosition is called,
-    // and more importantly the disk keys are NOT written until SaveGame() runs).
     private HashSet<string> _pendingUnlockedDoors = new HashSet<string>();
     private HashSet<string> _pendingPickedUpKeys = new HashSet<string>();
     // ─────────────────────────────────────────────────────────────
@@ -47,9 +44,9 @@ public class SaveSystem : MonoBehaviour
     // ── STATE QUERIES ─────────────────────────────────────────────
 
     /// <summary>
-    /// Returns true only if this key was picked up AND a checkpoint was reached after that.
-    /// (Checks disk only — pending memory is irrelevant here because it is cleared on
-    /// scene reload, so a key picked up before death will correctly respawn.)
+    /// True only if this key was picked up AND a checkpoint was saved afterward.
+    /// Checks disk only — pending memory is gone after scene reload so a key
+    /// picked up before death will correctly respawn.
     /// </summary>
     public bool IsKeyPickedUp(string keyID)
     {
@@ -57,9 +54,8 @@ public class SaveSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// Returns true if a door was unlocked in a previous saved session (disk),
-    /// OR was unlocked in the current session (memory) — so it stays open
-    /// within the same run even before a checkpoint.
+    /// True if a door was unlocked in a previous saved session (disk)
+    /// OR in the current session (memory) so it stays open within the same run.
     /// </summary>
     public bool IsDoorUnlocked(string doorID)
     {
@@ -87,12 +83,18 @@ public class SaveSystem : MonoBehaviour
             PlayerPrefs.SetFloat("SavedPosY", safePosition.y);
             PlayerPrefs.SetFloat("SavedPosZ", safePosition.z);
 
-            // Flush key inventory
+            // Save key inventory — what the hero is CURRENTLY holding.
+            // This correctly handles all cases:
+            //   - Has key in inventory → saved as true → respawns with it after death
+            //   - Used key on door before checkpoint → hero.RedKey is false → saved as false
+            //     but the door is flushed below so it stays unlocked
             AN_HeroInteractive hero = player.GetComponent<AN_HeroInteractive>();
+            if (hero == null) hero = player.GetComponentInChildren<AN_HeroInteractive>();
             if (hero != null)
             {
                 PlayerPrefs.SetInt("SavedRedKey", hero.RedKey ? 1 : 0);
                 PlayerPrefs.SetInt("SavedBlueKey", hero.BlueKey ? 1 : 0);
+                Debug.Log("[SaveSystem] Keys saved at checkpoint — Red: " + hero.RedKey + "  Blue: " + hero.BlueKey);
             }
         }
 
@@ -132,6 +134,7 @@ public class SaveSystem : MonoBehaviour
             HUDManager.Instance.SetScore(PlayerPrefs.GetInt("SavedScore", 0));
 
         AN_HeroInteractive hero = player.GetComponent<AN_HeroInteractive>();
+        if (hero == null) hero = player.GetComponentInChildren<AN_HeroInteractive>();
         if (hero != null)
         {
             hero.RedKey = PlayerPrefs.GetInt("SavedRedKey", 0) == 1;
@@ -139,7 +142,7 @@ public class SaveSystem : MonoBehaviour
             Debug.Log("[SaveSystem] Restored keys — Red: " + hero.RedKey + "  Blue: " + hero.BlueKey);
         }
 
-        // Clear session memory on respawn — pending state is lost on death by design
+        // Clear session memory — pending state is intentionally lost on death
         _pendingUnlockedDoors.Clear();
         _pendingPickedUpKeys.Clear();
 
