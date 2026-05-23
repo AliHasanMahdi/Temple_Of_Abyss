@@ -16,7 +16,7 @@ public class EnemyRoom : MonoBehaviour
     public AN_DoorScript secondDoor;
 
     [Header("Settings")]
-    public float unlockDelay = 1.5f;   // pause before door opens (dramatic effect)
+    public float unlockDelay = 1.5f;
 
     private int totalEnemies;
     private int deadEnemies;
@@ -24,7 +24,6 @@ public class EnemyRoom : MonoBehaviour
 
     void Start()
     {
-        // Auto-collect enemies if list is empty — finds all EnemyHealth children
         if (enemies.Count == 0)
         {
             EnemyHealth[] found = GetComponentsInChildren<EnemyHealth>();
@@ -35,14 +34,12 @@ public class EnemyRoom : MonoBehaviour
         totalEnemies = enemies.Count;
         deadEnemies = 0;
 
-        // Assign this room to every enemy that doesn't have one set
         foreach (EnemyHealth e in enemies)
         {
             if (e != null && e.enemyRoom == null)
                 e.enemyRoom = this;
         }
 
-        // Make sure door starts locked
         if (doorToUnlock != null)
         {
             doorToUnlock.Locked = true;
@@ -57,7 +54,6 @@ public class EnemyRoom : MonoBehaviour
         Debug.Log("[EnemyRoom] Room has " + totalEnemies + " enemies. Door locked.");
     }
 
-    // Called by EnemyHealth.Die()
     public void OnEnemyDied()
     {
         if (roomCleared) return;
@@ -74,7 +70,6 @@ public class EnemyRoom : MonoBehaviour
 
     IEnumerator UnlockDoorRoutine()
     {
-        // Show message
         if (HUDManager.Instance != null)
             HUDManager.Instance.ShowTimedMessage("Room Cleared!", 3f);
 
@@ -82,13 +77,11 @@ public class EnemyRoom : MonoBehaviour
 
         yield return new WaitForSeconds(unlockDelay);
 
-        // Unlock and open the door
         if (doorToUnlock != null)
         {
             doorToUnlock.Locked = false;
             doorToUnlock.CanOpen = true;
-            doorToUnlock.PlayUnlockSound();
-            doorToUnlock.Action(); // auto-open it
+            doorToUnlock.Action();
             Debug.Log("[EnemyRoom] Door unlocked: " + doorToUnlock.name);
         }
 
@@ -96,22 +89,20 @@ public class EnemyRoom : MonoBehaviour
         {
             secondDoor.Locked = false;
             secondDoor.CanOpen = true;
-            secondDoor.PlayUnlockSound();
             secondDoor.Action();
             Debug.Log("[EnemyRoom] Second door unlocked: " + secondDoor.name);
         }
 
-        // Save door state so it stays unlocked after death
+        // Store in memory only — written to disk when player hits a checkpoint
         if (SaveSystem.Instance != null)
         {
             if (doorToUnlock != null)
-                SaveSystem.Instance.SaveDoorUnlocked(doorToUnlock.doorID);
+                SaveSystem.Instance.PendingDoorUnlocked(doorToUnlock.doorID);
             if (secondDoor != null)
-                SaveSystem.Instance.SaveDoorUnlocked(secondDoor.doorID);
+                SaveSystem.Instance.PendingDoorUnlocked(secondDoor.doorID);
         }
     }
 
-    // Draw a gizmo so you can see the room in Scene view
     void OnDrawGizmosSelected()
     {
         Gizmos.color = roomCleared ? Color.green : Color.red;

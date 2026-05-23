@@ -7,6 +7,14 @@ public class SaveSystem : MonoBehaviour
 {
     public static SaveSystem Instance;
 
+    // ── IN-MEMORY STATE (not written to disk until checkpoint) ────
+    // These are cleared automatically on scene reload (object is DontDestroyOnLoad
+    // but the sets are re-initialised each time DeleteSave/LoadSavedPosition is called,
+    // and more importantly the disk keys are NOT written until SaveGame() runs).
+    private HashSet<string> _pendingUnlockedDoors = new HashSet<string>();
+    private HashSet<string> _pendingPickedUpKeys = new HashSet<string>();
+    // ─────────────────────────────────────────────────────────────
+
     void Awake()
     {
         if (Instance == null)
@@ -20,7 +28,48 @@ public class SaveSystem : MonoBehaviour
         }
     }
 
-    // Called by Checkpoint — saves position, score, keys, and door states
+    // ── PENDING SETTERS (memory only, no disk write) ──────────────
+
+    /// <summary>Called by AN_DoorKey when picked up — held in memory until checkpoint.</summary>
+    public void PendingKeyPickup(string keyID, bool isRed)
+    {
+        _pendingPickedUpKeys.Add(keyID);
+        Debug.Log("[SaveSystem] Key pickup pending checkpoint — " + keyID);
+    }
+
+    /// <summary>Called by AN_DoorScript / EnemyRoom when a door is unlocked — held in memory until checkpoint.</summary>
+    public void PendingDoorUnlocked(string doorID)
+    {
+        _pendingUnlockedDoors.Add(doorID);
+        Debug.Log("[SaveSystem] Door unlock pending checkpoint — " + doorID);
+    }
+
+    // ── STATE QUERIES ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns true only if this key was picked up AND a checkpoint was reached after that.
+    /// (Checks disk only — pending memory is irrelevant here because it is cleared on
+    /// scene reload, so a key picked up before death will correctly respawn.)
+    /// </summary>
+    public bool IsKeyPickedUp(string keyID)
+    {
+        return PlayerPrefs.GetInt("KeyPickedUp_" + keyID, 0) == 1;
+    }
+
+    /// <summary>
+    /// Returns true if a door was unlocked in a previous saved session (disk),
+    /// OR was unlocked in the current session (memory) — so it stays open
+    /// within the same run even before a checkpoint.
+    /// </summary>
+    public bool IsDoorUnlocked(string doorID)
+    {
+        return PlayerPrefs.GetInt("Door_" + doorID, 0) == 1
+            || _pendingUnlockedDoors.Contains(doorID);
+    }
+
+    // ── CHECKPOINT SAVE (flushes everything to disk) ──────────────
+
+    /// <summary>Called by Checkpoint — saves position, score, keys, and doors to disk.</summary>
     public void SaveGame()
     {
         string currentScene = SceneManager.GetActiveScene().name;
@@ -37,40 +86,35 @@ public class SaveSystem : MonoBehaviour
             PlayerPrefs.SetFloat("SavedPosX", safePosition.x);
             PlayerPrefs.SetFloat("SavedPosY", safePosition.y);
             PlayerPrefs.SetFloat("SavedPosZ", safePosition.z);
+
+            // Flush key inventory
+            AN_HeroInteractive hero = player.GetComponent<AN_HeroInteractive>();
+            if (hero != null)
+            {
+                PlayerPrefs.SetInt("SavedRedKey", hero.RedKey ? 1 : 0);
+                PlayerPrefs.SetInt("SavedBlueKey", hero.BlueKey ? 1 : 0);
+            }
         }
 
-        SaveKeys();
+        // Flush pending door unlocks to disk
+        foreach (string doorID in _pendingUnlockedDoors)
+            PlayerPrefs.SetInt("Door_" + doorID, 1);
+
+        // Flush pending key pickup flags to disk
+        foreach (string keyID in _pendingPickedUpKeys)
+            PlayerPrefs.SetInt("KeyPickedUp_" + keyID, 1);
+
         PlayerPrefs.Save();
-        Debug.Log("[SaveSystem] Game saved at: " + currentScene);
+
+        // Clear pending sets — now safely on disk
+        _pendingUnlockedDoors.Clear();
+        _pendingPickedUpKeys.Clear();
+
+        Debug.Log("[SaveSystem] Game saved at checkpoint: " + currentScene);
     }
 
-    // Called when player picks up a key — saves key state immediately
-    public void SaveKeys()
-    {
-        AN_HeroInteractive hero = FindObjectOfType<AN_HeroInteractive>();
-        if (hero == null) return;
+    // ── LOAD (called after respawn) ───────────────────────────────
 
-        PlayerPrefs.SetInt("SavedRedKey", hero.RedKey ? 1 : 0);
-        PlayerPrefs.SetInt("SavedBlueKey", hero.BlueKey ? 1 : 0);
-        PlayerPrefs.Save();
-        Debug.Log("[SaveSystem] Keys saved — Red: " + hero.RedKey + "  Blue: " + hero.BlueKey);
-    }
-
-    // Called when a door is unlocked — saves that door's unlocked state
-    public void SaveDoorUnlocked(string doorID)
-    {
-        PlayerPrefs.SetInt("Door_" + doorID, 1);
-        PlayerPrefs.Save();
-        Debug.Log("[SaveSystem] Door saved as unlocked: " + doorID);
-    }
-
-    // Check if a door was already unlocked before player died
-    public bool IsDoorUnlocked(string doorID)
-    {
-        return PlayerPrefs.GetInt("Door_" + doorID, 0) == 1;
-    }
-
-    // Called after respawn — restores position, score, keys
     public void LoadSavedPosition()
     {
         if (!HasSave()) return;
@@ -94,6 +138,10 @@ public class SaveSystem : MonoBehaviour
             hero.BlueKey = PlayerPrefs.GetInt("SavedBlueKey", 0) == 1;
             Debug.Log("[SaveSystem] Restored keys — Red: " + hero.RedKey + "  Blue: " + hero.BlueKey);
         }
+
+        // Clear session memory on respawn — pending state is lost on death by design
+        _pendingUnlockedDoors.Clear();
+        _pendingPickedUpKeys.Clear();
 
         Debug.Log("[SaveSystem] Restored position to: " + player.transform.position);
     }
@@ -147,6 +195,8 @@ public class SaveSystem : MonoBehaviour
         return position + Vector3.up * skin;
     }
 
+    // ── DELETE SAVE ───────────────────────────────────────────────
+
     public void DeleteSave()
     {
         PlayerPrefs.DeleteKey("SavedScene");
@@ -158,7 +208,6 @@ public class SaveSystem : MonoBehaviour
         PlayerPrefs.DeleteKey("SavedRedKey");
         PlayerPrefs.DeleteKey("SavedBlueKey");
 
-        // Clear level progress flags so New Game really starts fresh.
         PlayerPrefs.DeleteKey("KeyPickedUp_Key_01");
         PlayerPrefs.DeleteKey("KeyPickedUp_Key_02");
         PlayerPrefs.DeleteKey("Door_Door_01");
@@ -166,6 +215,9 @@ public class SaveSystem : MonoBehaviour
         PlayerPrefs.DeleteKey("Door_Door_03");
         PlayerPrefs.DeleteKey("CoinsCollected");
         PlayerPrefs.Save();
+
+        _pendingUnlockedDoors.Clear();
+        _pendingPickedUpKeys.Clear();
     }
 
     public bool HasSave()
@@ -178,8 +230,7 @@ public class SaveSystem : MonoBehaviour
         switch (sceneName)
         {
             case "Level01":
-            case "Level01_Entrance":
-                return "Level 1 - Temple Entrance";
+            case "Level01_Entrance": return "Level 1 - Temple Entrance";
             case "Level02_Corridor": return "Level 2 - Torch Corridor";
             case "Level03_Hall": return "Level 3 - Puzzle Hall";
             case "Level04_Vault": return "Level 4 - Abyss Vault";

@@ -60,7 +60,7 @@ public class AN_DoorScript : MonoBehaviour
         if (doorAudioSource == null)
         {
             doorAudioSource = gameObject.AddComponent<AudioSource>();
-            doorAudioSource.spatialBlend = 1f; // full 3D
+            doorAudioSource.spatialBlend = 1f;
             doorAudioSource.rolloffMode = AudioRolloffMode.Linear;
             doorAudioSource.minDistance = 1f;
             doorAudioSource.maxDistance = 25f;
@@ -73,7 +73,7 @@ public class AN_DoorScript : MonoBehaviour
 
         LoadDefaultSounds();
 
-        // Restore unlocked state after player death
+        // Restore unlocked state — checks both disk (past checkpoint) and session memory
         if (SaveSystem.Instance != null && SaveSystem.Instance.IsDoorUnlocked(doorID))
         {
             Locked = false;
@@ -111,22 +111,20 @@ public class AN_DoorScript : MonoBehaviour
                 RedLocked = false;
                 HeroInteractive.RedKey = false;
                 PlayDoorSoundAudible(unlockSound);
+
+                // Store in memory only — written to disk when player hits a checkpoint
                 if (SaveSystem.Instance != null)
-                {
-                    SaveSystem.Instance.SaveDoorUnlocked(doorID);
-                    SaveSystem.Instance.SaveKeys();
-                }
+                    SaveSystem.Instance.PendingDoorUnlocked(doorID);
             }
             else if (BlueLocked && HeroInteractive.BlueKey)
             {
                 BlueLocked = false;
                 HeroInteractive.BlueKey = false;
                 PlayDoorSoundAudible(unlockSound);
+
+                // Store in memory only — written to disk when player hits a checkpoint
                 if (SaveSystem.Instance != null)
-                {
-                    SaveSystem.Instance.SaveDoorUnlocked(doorID);
-                    SaveSystem.Instance.SaveKeys();
-                }
+                    SaveSystem.Instance.PendingDoorUnlocked(doorID);
             }
         }
 
@@ -144,19 +142,19 @@ public class AN_DoorScript : MonoBehaviour
         if (isOpened && CanClose)
         {
             isOpened = false;
-            PlayDoorSound(closeSound);     // <-- close sound
+            PlayDoorSound(closeSound);
         }
         else if (!isOpened)
         {
             isOpened = true;
-            PlayDoorSound(openSound);      // <-- open sound
+            PlayDoorSound(openSound);
 
             if (rbDoor != null)
                 rbDoor.AddRelativeTorque(new Vector3(0, 0, 20f));
         }
     }
 
-    // ── DOOR SOUND HELPER ─────────────────────────────────────────
+    // ── DOOR SOUND HELPERS ────────────────────────────────────────
     AudioClip PlayDoorSound(AudioClip clip)
     {
         if (clip == null)
@@ -165,7 +163,7 @@ public class AN_DoorScript : MonoBehaviour
             clip = openSound;
         }
         if (doorAudioSource == null || clip == null) return clip;
-        doorAudioSource.pitch = Random.Range(0.95f, 1.05f); // subtle variation per door
+        doorAudioSource.pitch = Random.Range(0.95f, 1.05f);
         doorAudioSource.PlayOneShot(clip, doorVolume);
         return clip;
     }

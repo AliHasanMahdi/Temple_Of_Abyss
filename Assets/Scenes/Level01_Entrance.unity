@@ -3686,7 +3686,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5620097159907514566, guid: 07dd0ed6acb5c5140a213008cf7b2a1d, type: 3}
       propertyPath: doorID
-      value: Door_02
+      value: Door_05
       objectReference: {fileID: 0}
     - target: {fileID: 5620097159907514566, guid: 07dd0ed6acb5c5140a213008cf7b2a1d, type: 3}
       propertyPath: RedLocked
@@ -4598,7 +4598,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5620097159907514566, guid: 07dd0ed6acb5c5140a213008cf7b2a1d, type: 3}
       propertyPath: doorID
-      value: Door_01
+      value: Door_03
+      objectReference: {fileID: 0}
+    - target: {fileID: 5620097160305644085, guid: 07dd0ed6acb5c5140a213008cf7b2a1d, type: 3}
+      propertyPath: pickupRange
+      value: 3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -11740,6 +11744,8 @@ MonoBehaviour:
   currentHealth: 0
   destroyDelay: 3
   enemyRoom: {fileID: 471838650}
+  deathSound: {fileID: 0}
+  deathVolume: 0.9
 --- !u!136 &282666255
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -11827,6 +11833,7 @@ MonoBehaviour:
   patrolStepRate: 1.6
   chaseStepRate: 2.4
   footstepVolume: 0.7
+  footstepAudibleDistance: 12
   lostSightDelay: 3
 --- !u!195 &282666258
 NavMeshAgent:
@@ -22303,6 +22310,125 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 63394905}
   m_SourcePrefab: {fileID: 100100000, guid: a55e8b944b49e774899ecb13192840e5, type: 3}
+--- !u!1 &425044375 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5815388445836955371, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
+  m_PrefabInstance: {fileID: 1187379686}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &425044383
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 425044375}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4efd9159d57dc104ca36f6af7df827e5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  openCreakSound: {fileID: 8300000, guid: 71338e9c0995b42569ef100ba7f3c5c7, type: 3}
+  bangsStopSound: {fileID: 8300000, guid: c52f0b0e644464ca0b066d80091a5c8f, type: 3}
+  volume: 0.85
+  minImpulse: 0.8
+  stopDelay: 0.4
+--- !u!82 &425044384
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 425044375}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1001 &425701174
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -25710,6 +25836,10 @@ PrefabInstance:
     - target: {fileID: 6200662137476766101, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
       propertyPath: m_Mass
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6200662137476766102, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
+      propertyPath: doorID
+      value: Door_07
       objectReference: {fileID: 0}
     - target: {fileID: 6200662137476766102, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
       propertyPath: CanClose
@@ -32473,6 +32603,8 @@ MonoBehaviour:
   currentHealth: 0
   destroyDelay: 3
   enemyRoom: {fileID: 471838650}
+  deathSound: {fileID: 0}
+  deathVolume: 0.9
 --- !u!136 &695162051
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -32560,6 +32692,7 @@ MonoBehaviour:
   patrolStepRate: 1.6
   chaseStepRate: 2.4
   footstepVolume: 0.7
+  footstepAudibleDistance: 12
   lostSightDelay: 3
 --- !u!195 &695162054
 NavMeshAgent:
@@ -33240,13 +33373,12 @@ MonoBehaviour:
   damageInterval: 1
   roomBoundary: {fileID: 1194920574}
   footstepAudioSource: {fileID: 0}
-  patrolFootstepClips:
-  - {fileID: 8300000, guid: c9c4335209593f646b1d2d8f1465f7be, type: 3}
-  chaseFootstepClips:
-  - {fileID: 8300000, guid: 1fecea306f7e06b40b57a6bd65d2487f, type: 3}
+  patrolFootstepClips: []
+  chaseFootstepClips: []
   patrolStepRate: 1.6
   chaseStepRate: 2.4
   footstepVolume: 0.7
+  footstepAudibleDistance: 12
   lostSightDelay: 3
 --- !u!195 &698450820
 NavMeshAgent:
@@ -33341,6 +33473,8 @@ MonoBehaviour:
   currentHealth: 0
   destroyDelay: 3
   enemyRoom: {fileID: 471838650}
+  deathSound: {fileID: 0}
+  deathVolume: 0.9
 --- !u!1 &699244628
 GameObject:
   m_ObjectHideFlags: 0
@@ -53067,6 +53201,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6200662137476766102, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
+      propertyPath: isOpened
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6200662137476766102, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
       propertyPath: RedLocked
       value: 0
       objectReference: {fileID: 0}
@@ -53082,6 +53220,10 @@ PrefabInstance:
       propertyPath: lockedSound
       value: 
       objectReference: {fileID: 8300000, guid: 9ee2bbf3911a4448bbcbb25e6e57c892, type: 3}
+    - target: {fileID: 6200662137476766102, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
+      propertyPath: unlockSound
+      value: 
+      objectReference: {fileID: 8300000, guid: eeb40c82002604d4080b1810e3a3cd21, type: 3}
     - target: {fileID: 8296686746469984768, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.1220268
@@ -53105,7 +53247,13 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5815388445836955371, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 425044384}
+    - targetCorrespondingSourceObject: {fileID: 5815388445836955371, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 425044383}
   m_SourcePrefab: {fileID: 100100000, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
 --- !u!1001 &1188153384
 PrefabInstance:
@@ -53339,6 +53487,8 @@ MonoBehaviour:
   currentHealth: 0
   destroyDelay: 3
   enemyRoom: {fileID: 471838650}
+  deathSound: {fileID: 0}
+  deathVolume: 0.9
 --- !u!136 &1194093295
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -53426,6 +53576,7 @@ MonoBehaviour:
   patrolStepRate: 1.6
   chaseStepRate: 2.4
   footstepVolume: 0.7
+  footstepAudibleDistance: 12
   lostSightDelay: 3
 --- !u!195 &1194093298
 NavMeshAgent:
@@ -57388,7 +57539,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5620097159907514566, guid: 07dd0ed6acb5c5140a213008cf7b2a1d, type: 3}
       propertyPath: doorID
-      value: Door_02
+      value: Door_04
       objectReference: {fileID: 0}
     - target: {fileID: 5620097159907514566, guid: 07dd0ed6acb5c5140a213008cf7b2a1d, type: 3}
       propertyPath: RedLocked
@@ -65630,7 +65781,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5620097159907514566, guid: 07dd0ed6acb5c5140a213008cf7b2a1d, type: 3}
       propertyPath: doorID
-      value: Door_03
+      value: Door_06
       objectReference: {fileID: 0}
     - target: {fileID: 5620097160305644085, guid: 07dd0ed6acb5c5140a213008cf7b2a1d, type: 3}
       propertyPath: keyID
@@ -66304,6 +66455,8 @@ MonoBehaviour:
   currentHealth: 0
   destroyDelay: 3
   enemyRoom: {fileID: 471838650}
+  deathSound: {fileID: 0}
+  deathVolume: 0.9
 --- !u!136 &1505334378
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -66391,6 +66544,7 @@ MonoBehaviour:
   patrolStepRate: 1.6
   chaseStepRate: 2.4
   footstepVolume: 0.7
+  footstepAudibleDistance: 12
   lostSightDelay: 3
 --- !u!195 &1505334381
 NavMeshAgent:
@@ -70259,6 +70413,33 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -4097844776799219605, guid: a179947a5e31cc0428e706c0841d3277, type: 3}
+--- !u!1 &1586446866 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3591644860445115680, guid: a55e8b944b49e774899ecb13192840e5, type: 3}
+  m_PrefabInstance: {fileID: 1802303649}
+  m_PrefabAsset: {fileID: 0}
+--- !u!64 &1586446867
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1586446866}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -4097844776799219605, guid: a179947a5e31cc0428e706c0841d3277, type: 3}
 --- !u!1001 &1589626165
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -72154,6 +72335,10 @@ PrefabInstance:
     - target: {fileID: 6200662137476766101, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
       propertyPath: m_Mass
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6200662137476766102, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
+      propertyPath: doorID
+      value: Door_02
       objectReference: {fileID: 0}
     - target: {fileID: 6200662137476766102, guid: 4ecf6aa2a2182cf4c843c0d565e94cd0, type: 3}
       propertyPath: CanClose
@@ -78674,7 +78859,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3591644860445115680, guid: a55e8b944b49e774899ecb13192840e5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1586446867}
   m_SourcePrefab: {fileID: 100100000, guid: a55e8b944b49e774899ecb13192840e5, type: 3}
 --- !u!1001 &1803517698
 PrefabInstance:

@@ -29,10 +29,12 @@ public class AN_DoorKey : MonoBehaviour
         if (hero == null)
             Debug.LogError("[AN_DoorKey] No AN_HeroInteractive found! " + gameObject.name + " won't work.");
 
-        // If this key was already picked up before the player died, destroy it immediately
-        if (PlayerPrefs.GetInt("KeyPickedUp_" + keyID, 0) == 1)
+        // Only destroy (don't respawn) if the pickup was confirmed by a checkpoint save on disk.
+        // If the player picked it up but died before a checkpoint, IsKeyPickedUp returns false
+        // (pending memory was cleared on scene reload) so the key correctly respawns.
+        if (SaveSystem.Instance != null && SaveSystem.Instance.IsKeyPickedUp(keyID))
         {
-            Debug.Log("[AN_DoorKey] Key already collected, not respawning: " + keyID);
+            Debug.Log("[AN_DoorKey] Key already collected and saved — not respawning: " + keyID);
             Destroy(gameObject);
         }
     }
@@ -43,9 +45,7 @@ public class AN_DoorKey : MonoBehaviour
         if (!InRange()) return;
 
         if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
-        {
             PickUp();
-        }
     }
 
     void PickUp()
@@ -56,22 +56,18 @@ public class AN_DoorKey : MonoBehaviour
                 hero.RedKey = true;
                 Debug.Log("[AN_DoorKey] Red Key picked up!");
                 break;
-
             case KeyType.Blue:
                 hero.BlueKey = true;
                 Debug.Log("[AN_DoorKey] Blue Key picked up!");
                 break;
         }
 
-        // Mark this specific key as collected
-        PlayerPrefs.SetInt("KeyPickedUp_" + keyID, 1);
-        PlayerPrefs.Save();
-
-        // Save key state
+        // Held in memory only — flushed to disk when player touches a checkpoint.
+        // If the player dies before that, the scene reloads, pending memory is gone,
+        // and this key will respawn correctly.
         if (SaveSystem.Instance != null)
-            SaveSystem.Instance.SaveKeys();
+            SaveSystem.Instance.PendingKeyPickup(keyID, keyType == KeyType.Red);
 
-        // Show HUD message
         if (HUDManager.Instance != null)
             HUDManager.Instance.ShowKeyMessage(keyType == KeyType.Red);
 
@@ -81,7 +77,6 @@ public class AN_DoorKey : MonoBehaviour
     bool InRange()
     {
         if (Camera.main == null) return false;
-
         return Vector3.Distance(
             transform.position,
             Camera.main.transform.position
