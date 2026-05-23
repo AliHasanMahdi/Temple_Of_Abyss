@@ -36,10 +36,16 @@ public class SettingsMenu : MonoBehaviour
     void Start()
     {
         if (musicSlider != null)
+        {
             musicSlider.value = PlayerPrefs.GetFloat("MusicVolume", 1f);
+            musicSlider.onValueChanged.AddListener(SetMusicVolume);
+        }
 
         if (sfxSlider != null)
+        {
             sfxSlider.value = PlayerPrefs.GetFloat("SFXVolume", 1f);
+            sfxSlider.onValueChanged.AddListener(SetSFXVolume);
+        }
 
         if (fullscreenToggle != null)
         {
@@ -71,13 +77,25 @@ public class SettingsMenu : MonoBehaviour
         }
 
         if (closeButton != null)
+        {
+            TempleAudio.RegisterButton(closeButton);
             closeButton.onClick.AddListener(Close);
+        }
 
         gameObject.SetActive(false);
     }
 
-    public void SetMusicVolume(float volume) { PlayerPrefs.SetFloat("MusicVolume", volume); }
-    public void SetSFXVolume(float volume) { PlayerPrefs.SetFloat("SFXVolume", volume); }
+    public void SetMusicVolume(float volume)
+    {
+        PlayerPrefs.SetFloat("MusicVolume", volume);
+        TempleAudio.SetMusicVolume(volume);
+    }
+
+    public void SetSFXVolume(float volume)
+    {
+        PlayerPrefs.SetFloat("SFXVolume", volume);
+        TempleAudio.SetSfxVolume(volume);
+    }
 
     public void SetResolution(int index)
     {

@@ -23,6 +23,30 @@ public class EnemyAI : MonoBehaviour
     [Header("Room Settings")]
     public Collider roomBoundary;
 
+    // ── FOOTSTEP SOUNDS ──────────────────────────────────────────
+    [Header("Enemy Footstep Sounds")]
+    [Tooltip("AudioSource on this enemy used for footsteps (3D)")]
+    public AudioSource footstepAudioSource;
+
+    [Tooltip("Footstep clips while patrolling (e.g. Footstep_Boots_01..07)")]
+    public AudioClip[] patrolFootstepClips;
+
+    [Tooltip("Footstep clips while chasing (e.g. Footstep_Deep_01..07)")]
+    public AudioClip[] chaseFootstepClips;
+
+    [Tooltip("Steps per second while patrolling")]
+    public float patrolStepRate = 1.6f;
+
+    [Tooltip("Steps per second while chasing")]
+    public float chaseStepRate = 2.4f;
+
+    [Range(0f, 1f)]
+    public float footstepVolume = 0.7f;
+
+    [Tooltip("Enemy walk sound only plays when the player is within this distance.")]
+    public float footstepAudibleDistance = 12f;
+    // ─────────────────────────────────────────────────────────────
+
     private enum State { Patrolling, Chasing, Returning, Dead }
     private State currentState = State.Patrolling;
 
@@ -43,7 +67,10 @@ public class EnemyAI : MonoBehaviour
     // Vision
     private bool canSeePlayer = false;
     private float lostSightTimer = 0f;
-    public float lostSightDelay = 3f; // seconds before giving up chase
+    public float lostSightDelay = 3f;
+
+    // Footstep timing
+    private float footstepTimer = 0f;
 
     void Start()
     {
@@ -52,12 +79,9 @@ public class EnemyAI : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         FindPlayer();
 
-        // Auto find camera if not assigned
         if (enemyCamera == null)
             enemyCamera = GetComponentInChildren<Camera>();
 
-        // Disable enemy camera from rendering
-        // We only use it for vision checks not actual rendering
         if (enemyCamera != null)
             enemyCamera.enabled = false;
 
@@ -73,12 +97,33 @@ public class EnemyAI : MonoBehaviour
         PlaceAgentOnNavMesh();
         lastPosition = transform.position;
         GoToNextPatrolPoint();
+
+        // Auto-create 3D AudioSource if not assigned
+        if (footstepAudioSource == null)
+        {
+            footstepAudioSource = gameObject.AddComponent<AudioSource>();
+            footstepAudioSource.spatialBlend = 0f;
+            footstepAudioSource.rolloffMode = AudioRolloffMode.Linear;
+            footstepAudioSource.minDistance = 1f;
+            footstepAudioSource.maxDistance = footstepAudibleDistance;
+            footstepAudioSource.playOnAwake = false;
+        }
+        else
+        {
+            footstepAudioSource.spatialBlend = 0f;
+            footstepAudioSource.maxDistance = Mathf.Max(footstepAudioSource.maxDistance, footstepAudibleDistance);
+        }
+
+        if (!HasPlayableClips(patrolFootstepClips))
+            patrolFootstepClips = TempleAudio.LoadClips("TempleAudio/Enemy/freesound_community-rattling-bones-105394");
+
+        if (!HasPlayableClips(chaseFootstepClips))
+            chaseFootstepClips = patrolFootstepClips;
     }
 
     void PrepareRigidbodyForNavMesh()
     {
         if (rb == null) return;
-
         rb.isKinematic = true;
         rb.useGravity = false;
     }
@@ -97,13 +142,11 @@ public class EnemyAI : MonoBehaviour
             if (!agent.isOnNavMesh) return;
         }
 
-        // Check room boundary
         if (roomBoundary != null && player != null)
             playerInRoom = roomBoundary.bounds.Contains(player.position);
         else
             playerInRoom = false;
 
-        // Always check vision
         canSeePlayer = CheckVision();
 
         switch (currentState)
@@ -125,6 +168,7 @@ public class EnemyAI : MonoBehaviour
 
         RecoverIfStuck();
         UpdateAnimations();
+        HandleFootsteps();   // <-- new
     }
 
     void FindPlayer()
@@ -161,7 +205,7 @@ public class EnemyAI : MonoBehaviour
         return agent.SetDestination(hit.position);
     }
 
-    // ── VISION ──────────────────────────────
+    // ── VISION ──────────────────────────────────────────────────
 
     bool CheckVision()
     {
@@ -178,17 +222,13 @@ public class EnemyAI : MonoBehaviour
         Vector3 playerChest = player.position + Vector3.up * 1f;
         Vector3 dirToChest = (playerChest - eyePos).normalized;
 
-        // Ignore the enemy's own collider
         int enemyLayer = LayerMask.GetMask("Enemy");
         int ignoreEnemyMask = ~enemyLayer;
 
         RaycastHit hit;
         if (Physics.Raycast(eyePos, dirToChest, out hit, visionRange, ignoreEnemyMask))
         {
-            if (hit.transform.CompareTag("Player"))
-                return true;
-            else
-                return false;
+            return hit.transform.CompareTag("Player");
         }
 
         return true;
@@ -205,7 +245,8 @@ public class EnemyAI : MonoBehaviour
         Invoke("HidePrompt", 2f);
     }
 
-    // ── PATROL ──────────────────────────────
+    // ── PATROL ──────────────────────────────────────────────────
+
     void HandlePatrol()
     {
         agent.speed = patrolSpeed;
@@ -246,7 +287,8 @@ public class EnemyAI : MonoBehaviour
         currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
     }
 
-    // ── CHASE ──────────────────────────────
+    // ── CHASE ────────────────────────────────────────────────────
+
     void HandleChase()
     {
         if (player == null)
@@ -273,7 +315,6 @@ public class EnemyAI : MonoBehaviour
             {
                 damageTimer = 0f;
                 TriggerAttack();
-                Debug.Log("Distance to player: " + distanceToPlayer + " damage range: " + damageRange);
             }
         }
 
@@ -308,26 +349,14 @@ public class EnemyAI : MonoBehaviour
     {
         if (player == null) return;
 
-        // Try getting health directly from player transform
         PlayerHealth health = player.GetComponent<PlayerHealth>();
-
-        // If not found try parent
-        if (health == null)
-            health = player.GetComponentInParent<PlayerHealth>();
-
-        // If still not found search whole scene
-        if (health == null)
-            health = FindObjectOfType<PlayerHealth>();
+        if (health == null) health = player.GetComponentInParent<PlayerHealth>();
+        if (health == null) health = FindObjectOfType<PlayerHealth>();
 
         if (health != null)
-        {
             health.TakeDamage(damage);
-            Debug.Log("Enemy dealt " + damage + " damage to player!");
-        }
         else
-        {
             Debug.LogWarning("PlayerHealth not found!");
-        }
 
         if (animator != null)
         {
@@ -342,7 +371,8 @@ public class EnemyAI : MonoBehaviour
             animator.SetBool("IsAttacking", false);
     }
 
-    // ── RETURN ──────────────────────────────
+    // ── RETURN ───────────────────────────────────────────────────
+
     void HandleReturn()
     {
         agent.speed = patrolSpeed;
@@ -366,8 +396,7 @@ public class EnemyAI : MonoBehaviour
         {
             if (patrolPoints[i] == null) continue;
 
-            float dist = Vector3.Distance(transform.position,
-                                          patrolPoints[i].position);
+            float dist = Vector3.Distance(transform.position, patrolPoints[i].position);
             if (dist < closestDist)
             {
                 closestDist = dist;
@@ -410,7 +439,8 @@ public class EnemyAI : MonoBehaviour
             GoToNextPatrolPoint();
     }
 
-    // ── ANIMATIONS ──────────────────────────
+    // ── ANIMATIONS ───────────────────────────────────────────────
+
     void UpdateAnimations()
     {
         if (animator == null) return;
@@ -422,7 +452,66 @@ public class EnemyAI : MonoBehaviour
         animator.SetBool("IsChasing", isChasing);
     }
 
-    // ── DEATH ──────────────────────────────
+    // ── ENEMY FOOTSTEP SOUND ─────────────────────────────────────
+    void HandleFootsteps()
+    {
+        if (agent == null || footstepAudioSource == null) return;
+        if (player == null) return;
+
+        if (Vector3.Distance(transform.position, player.position) > footstepAudibleDistance)
+        {
+            footstepTimer = 0f;
+            return;
+        }
+
+        float speed = agent.velocity.magnitude;
+        if (speed < 0.2f || agent.isStopped)
+        {
+            footstepTimer = 0f;
+            return;
+        }
+
+        bool chasing = currentState == State.Chasing;
+        float stepRate = chasing ? chaseStepRate : patrolStepRate;
+        AudioClip[] clips = (chasing && chaseFootstepClips != null && chaseFootstepClips.Length > 0)
+            ? chaseFootstepClips
+            : patrolFootstepClips;
+
+        footstepTimer += Time.deltaTime;
+
+        if (footstepTimer >= 1f / stepRate)
+        {
+            footstepTimer = 0f;
+            PlayRandomFootstep(clips);
+        }
+    }
+
+    void PlayRandomFootstep(AudioClip[] clips)
+    {
+        if (!HasPlayableClips(clips)) return;
+
+        AudioClip clip = clips[Random.Range(0, clips.Length)];
+        for (int i = 0; clip == null && i < clips.Length; i++)
+            clip = clips[i];
+
+        footstepAudioSource.pitch = Random.Range(0.90f, 1.10f);
+        footstepAudioSource.PlayOneShot(clip, footstepVolume);
+        TempleAudio.PlaySfx(clip, footstepVolume);
+    }
+
+    bool HasPlayableClips(AudioClip[] clips)
+    {
+        if (clips == null || clips.Length == 0) return false;
+        foreach (AudioClip clip in clips)
+        {
+            if (clip != null) return true;
+        }
+        return false;
+    }
+    // ─────────────────────────────────────────────────────────────
+
+    // ── DEATH ────────────────────────────────────────────────────
+
     public void Die()
     {
         if (isDead) return;
@@ -443,18 +532,14 @@ public class EnemyAI : MonoBehaviour
             HUDManager.Instance.HideInteractPrompt();
     }
 
-    // Draw vision cone in Scene view
     void OnDrawGizmosSelected()
     {
-        // Vision range — yellow
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, visionRange);
 
-        // Damage range — red
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, damageRange);
 
-        // Vision cone — cyan lines
         Gizmos.color = Color.cyan;
         Vector3 eyePos = transform.position + Vector3.up * 1.7f;
         float halfFOV = fieldOfView / 2f;

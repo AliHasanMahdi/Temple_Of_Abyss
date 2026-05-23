@@ -87,6 +87,7 @@ public class EnemyRoom : MonoBehaviour
         {
             doorToUnlock.Locked = false;
             doorToUnlock.CanOpen = true;
+            doorToUnlock.PlayUnlockSound();
             doorToUnlock.Action(); // auto-open it
             Debug.Log("[EnemyRoom] Door unlocked: " + doorToUnlock.name);
         }
@@ -95,6 +96,7 @@ public class EnemyRoom : MonoBehaviour
         {
             secondDoor.Locked = false;
             secondDoor.CanOpen = true;
+            secondDoor.PlayUnlockSound();
             secondDoor.Action();
             Debug.Log("[EnemyRoom] Second door unlocked: " + secondDoor.name);
         }

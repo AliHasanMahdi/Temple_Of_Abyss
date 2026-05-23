@@ -40,10 +40,10 @@ public class PauseMenu : MonoBehaviour
     {
         SetPausePanelVisible(false);
 
-        if (resumeButton != null) resumeButton.onClick.AddListener(Resume);
-        if (settingsButton != null) settingsButton.onClick.AddListener(OpenSettings);
-        if (restartButton != null) restartButton.onClick.AddListener(RestartLevel);
-        if (mainMenuButton != null) mainMenuButton.onClick.AddListener(GoToMainMenu);
+        AddButtonListener(resumeButton, Resume);
+        AddButtonListener(settingsButton, OpenSettings);
+        AddButtonListener(restartButton, RestartLevel);
+        AddButtonListener(mainMenuButton, GoToMainMenu);
     }
 
     void OnEnable()
@@ -168,5 +168,12 @@ public class PauseMenu : MonoBehaviour
             pauseCanvasGroup.interactable = visible;
             pauseCanvasGroup.blocksRaycasts = visible;
         }
+    }
+
+    void AddButtonListener(Button button, UnityEngine.Events.UnityAction action)
+    {
+        if (button == null) return;
+        TempleAudio.RegisterButton(button);
+        button.onClick.AddListener(action);
     }
 }

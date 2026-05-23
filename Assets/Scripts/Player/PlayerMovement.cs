@@ -35,6 +35,27 @@ public class PlayerMovement : MonoBehaviour
     public float bobSpeed = 14f;
     public float bobAmount = 0.05f;
 
+    // ── FOOTSTEP SOUNDS ───────────────────────────────────────────
+    [Header("Footstep Sounds")]
+    [Tooltip("AudioSource on this GameObject used for footsteps")]
+    public AudioSource footstepAudioSource;
+
+    [Tooltip("Clips played while walking (e.g. Footstep_Boots_01..07)")]
+    public AudioClip[] walkFootstepClips;
+
+    [Tooltip("Clips played while sprinting (e.g. Footstep_Deep_01..07)")]
+    public AudioClip[] runFootstepClips;
+
+    [Tooltip("Steps per second while walking")]
+    public float walkStepRate = 1.8f;
+
+    [Tooltip("Steps per second while running")]
+    public float runStepRate = 2.8f;
+
+    [Range(0f, 1f)]
+    public float footstepVolume = 0.5f;
+    // ─────────────────────────────────────────────────────────────
+
     private CharacterController controller;
     private Vector3 velocity;
     private float xRotation = 0f;
@@ -53,6 +74,10 @@ public class PlayerMovement : MonoBehaviour
 
     private float bobTimer;
 
+    // Footstep timing
+    private float footstepTimer = 0f;
+    private bool hasMovementInput = false;
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
@@ -66,6 +91,34 @@ public class PlayerMovement : MonoBehaviour
         originalCameraPos = playerCamera.localPosition;
         crouchCameraPos = originalCameraPos - new Vector3(0, 1.0f, 0);
         targetCameraPos = originalCameraPos;
+
+        // Auto-create AudioSource if not assigned
+        if (footstepAudioSource == null)
+        {
+            footstepAudioSource = gameObject.AddComponent<AudioSource>();
+            footstepAudioSource.spatialBlend = 0f; // 2D sound for player
+            footstepAudioSource.playOnAwake = false;
+        }
+
+        if (!HasPlayableClips(walkFootstepClips))
+            walkFootstepClips = TempleAudio.LoadClips(
+                "TempleAudio/Footsteps/Footstep_Boots_01",
+                "TempleAudio/Footsteps/Footstep_Boots_02",
+                "TempleAudio/Footsteps/Footstep_Boots_03",
+                "TempleAudio/Footsteps/Footstep_Boots_04",
+                "TempleAudio/Footsteps/Footstep_Boots_05",
+                "TempleAudio/Footsteps/Footstep_Boots_06",
+                "TempleAudio/Footsteps/Footstep_Boots_07");
+
+        if (!HasPlayableClips(runFootstepClips))
+            runFootstepClips = TempleAudio.LoadClips(
+                "TempleAudio/Footsteps/Footstep_Deep_01",
+                "TempleAudio/Footsteps/Footstep_Deep_02",
+                "TempleAudio/Footsteps/Footstep_Deep_03",
+                "TempleAudio/Footsteps/Footstep_Deep_04",
+                "TempleAudio/Footsteps/Footstep_Deep_05",
+                "TempleAudio/Footsteps/Footstep_Deep_06",
+                "TempleAudio/Footsteps/Footstep_Deep_07");
     }
 
     void OnEnable()
@@ -75,10 +128,6 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        // ESC is handled ONLY by PauseMenu — do not handle it here
-        // This stops the double-pause conflict
-
-        // If game is paused, stop all player input
         if (Time.timeScale == 0f) return;
 
         HandleLook();
@@ -87,6 +136,7 @@ public class PlayerMovement : MonoBehaviour
         HandleCrouch();
         HandleHeadBob();
         HandleFOV();
+        HandleFootsteps();   // <-- new
     }
 
     void HandleLook()
@@ -114,6 +164,7 @@ public class PlayerMovement : MonoBehaviour
         if (Keyboard.current.dKey.isPressed) moveX = 1f;
         if (Keyboard.current.wKey.isPressed) moveZ = 1f;
         if (Keyboard.current.sKey.isPressed) moveZ = -1f;
+        hasMovementInput = Mathf.Abs(moveX) > 0f || Mathf.Abs(moveZ) > 0f;
 
         float speed = isCrouching ? walkSpeed * 0.5f :
                       Keyboard.current.leftShiftKey.isPressed ? runSpeed : walkSpeed;
@@ -134,7 +185,6 @@ public class PlayerMovement : MonoBehaviour
         {
             coyoteTimer = coyoteTime;
 
-            // Reset vertical velocity when grounded — this stops falling through floor
             if (velocity.y < 0)
                 velocity.y = -2f;
         }
@@ -238,12 +288,60 @@ public class PlayerMovement : MonoBehaviour
         cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOV, fovSpeed * Time.deltaTime);
     }
 
-    // Called by PauseMenu to lock/unlock cursor
+    // ── FOOTSTEP SOUND ──────────────────────────────────────────
+    void HandleFootsteps()
+    {
+        if (!isGrounded) return;
+        if (footstepAudioSource == null) return;
+
+        if (!hasMovementInput)
+        {
+            footstepTimer = 0f;
+            return;
+        }
+
+        bool isSprinting = Keyboard.current.leftShiftKey.isPressed && !isCrouching;
+        float stepRate = isSprinting ? runStepRate : walkStepRate;
+        AudioClip[] clips = (isSprinting && runFootstepClips != null && runFootstepClips.Length > 0)
+            ? runFootstepClips
+            : walkFootstepClips;
+
+        footstepTimer += Time.deltaTime;
+
+        if (footstepTimer >= 1f / stepRate)
+        {
+            footstepTimer = 0f;
+            PlayRandomFootstep(clips);
+        }
+    }
+
+    void PlayRandomFootstep(AudioClip[] clips)
+    {
+        if (!HasPlayableClips(clips)) return;
+
+        AudioClip clip = clips[Random.Range(0, clips.Length)];
+        for (int i = 0; clip == null && i < clips.Length; i++)
+            clip = clips[i];
+
+        footstepAudioSource.pitch = Random.Range(0.92f, 1.08f); // slight pitch variation
+        footstepAudioSource.PlayOneShot(clip, footstepVolume);
+    }
+
+    bool HasPlayableClips(AudioClip[] clips)
+    {
+        if (clips == null || clips.Length == 0) return false;
+        foreach (AudioClip clip in clips)
+        {
+            if (clip != null) return true;
+        }
+        return false;
+    }
+    // ────────────────────────────────────────────────────────────
+
     public void OnPause()
     {
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        // Reset velocity so player doesn't fall through floor on resume
         velocity = Vector3.zero;
     }
 
@@ -251,7 +349,6 @@ public class PlayerMovement : MonoBehaviour
     {
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-        // Reset velocity again on resume to be safe
         velocity = Vector3.zero;
     }
 }

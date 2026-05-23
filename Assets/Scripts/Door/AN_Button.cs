@@ -38,6 +38,9 @@ public class AN_Button : MonoBehaviour
     Quaternion startQuat, rampQuat;
 
     Animator anim;
+    AudioSource audioSource;
+    AudioClip buttonSound;
+    AudioClip leverSound;
 
     // NearView()
     float distance;
@@ -47,9 +50,27 @@ public class AN_Button : MonoBehaviour
     void Start()
     {
         anim = GetComponent<Animator>();
-        startYPosition = RampObject.position.y;
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.spatialBlend = 1f;
+            audioSource.rolloffMode = AudioRolloffMode.Linear;
+            audioSource.minDistance = 1f;
+            audioSource.maxDistance = 12f;
+            audioSource.playOnAwake = false;
+        }
+        else
+        {
+            audioSource.maxDistance = Mathf.Max(audioSource.maxDistance, 12f);
+        }
+
+        LoadDefaultSound();
+        if (RampObject != null)
+            startYPosition = RampObject.position.y;
         startQuat = transform.rotation;
-        rampQuat = RampObject.rotation;
+        if (RampObject != null)
+            rampQuat = RampObject.rotation;
     }
 
     void Update()
@@ -58,6 +79,8 @@ public class AN_Button : MonoBehaviour
         {
             if (Input.GetKeyDown(KeyCode.E) && !isValve && NearView()) // 1.lever and 2.button
             {
+                PlayButtonSound();
+
                 // Door logic (still works if DoorObject is assigned)
                 if (DoorObject != null && DoorObject.Remote)
                 {
@@ -93,6 +116,9 @@ public class AN_Button : MonoBehaviour
                 // changing value in script
                 if (Input.GetKey(KeyCode.E) && NearView())
                 {
+                    if (!audioSource.isPlaying)
+                        PlayButtonSound();
+
                     if (valveBool)
                     {
                         if (!isOpened && CanOpen && current < max) current += speed * Time.deltaTime;
@@ -133,5 +159,25 @@ public class AN_Button : MonoBehaviour
         angleView = Vector3.Angle(Camera.main.transform.forward, direction);
         if (angleView < 45f && distance < 2f) return true;
         else return false;
+    }
+
+    void PlayButtonSound()
+    {
+        LoadDefaultSound();
+        AudioClip clip = isLever ? leverSound : buttonSound;
+        if (clip == null) clip = buttonSound;
+        if (audioSource == null || clip == null) return;
+
+        audioSource.pitch = Random.Range(0.95f, 1.05f);
+        audioSource.PlayOneShot(clip, 0.75f);
+        TempleAudio.PlaySfx(clip, 0.75f);
+    }
+
+    void LoadDefaultSound()
+    {
+        if (buttonSound == null)
+            buttonSound = TempleAudio.LoadClip("TempleAudio/SFX/Call Classic Old Lift Elevator Button With Ride 1");
+        if (leverSound == null)
+            leverSound = TempleAudio.LoadClip("TempleAudio/SFX/clank1");
     }
 }

@@ -165,6 +165,7 @@ public class GameOverMenu : MonoBehaviour
 
         Button button = image.gameObject.AddComponent<Button>();
         button.targetGraphic = image;
+        TempleAudio.RegisterButton(button);
         button.onClick.AddListener(action);
 
         if (buttonHighlightedSprite != null)

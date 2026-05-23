@@ -23,10 +23,10 @@ public class MainMenu : MonoBehaviour
         CheckSaveFile();
 
         // Connect buttons
-        if (newGameButton != null) newGameButton.onClick.AddListener(NewGame);
-        if (loadGameButton != null) loadGameButton.onClick.AddListener(LoadGame);
-        if (settingsButton != null) settingsButton.onClick.AddListener(OpenSettings);
-        if (quitButton != null) quitButton.onClick.AddListener(QuitGame);
+        AddButtonListener(newGameButton, NewGame);
+        AddButtonListener(loadGameButton, LoadGame);
+        AddButtonListener(settingsButton, OpenSettings);
+        AddButtonListener(quitButton, QuitGame);
     }
 
     void CheckSaveFile()
@@ -82,5 +82,12 @@ public class MainMenu : MonoBehaviour
     {
         Debug.Log("Game Quit");
         Application.Quit();
+    }
+
+    void AddButtonListener(Button button, UnityEngine.Events.UnityAction action)
+    {
+        if (button == null) return;
+        TempleAudio.RegisterButton(button);
+        button.onClick.AddListener(action);
     }
 }

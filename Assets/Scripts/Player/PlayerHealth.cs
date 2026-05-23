@@ -30,26 +30,21 @@ public class PlayerHealth : MonoBehaviour
         string currentScene = SceneManager.GetActiveScene().name;
 
         if (savedScene != currentScene) yield break;
-        if (!PlayerPrefs.HasKey("SavedPosX")) yield break;
+        if (SaveSystem.Instance != null)
+        {
+            SaveSystem.Instance.RestorePlayerToSavedPosition(gameObject);
+        }
+        else
+        {
+            Vector3 savedPosition = new Vector3(
+                PlayerPrefs.GetFloat("SavedPosX", transform.position.x),
+                PlayerPrefs.GetFloat("SavedPosY", transform.position.y),
+                PlayerPrefs.GetFloat("SavedPosZ", transform.position.z));
+            transform.position = SaveSystem.GetSafePlayerPosition(savedPosition, gameObject);
+        }
 
-        float x = PlayerPrefs.GetFloat("SavedPosX", 0f);
-        float y = PlayerPrefs.GetFloat("SavedPosY", 1f);
-        float z = PlayerPrefs.GetFloat("SavedPosZ", 0f);
-
-        Vector3 savedPos = new Vector3(x, y, z);
-        Debug.Log("Restoring to: " + savedPos);
-
-        CharacterController cc = GetComponent<CharacterController>();
-
-        // Disable → move → wait → enable
-        if (cc != null) cc.enabled = false;
-        transform.position = savedPos;
+        yield return new WaitForFixedUpdate();
         yield return null;
-        yield return null;
-        if (cc != null) cc.enabled = true;
-        yield return null;
-
-        Debug.Log("CharacterController enabled: " + cc.enabled);
 
         // Restore score
         int savedScore = PlayerPrefs.GetInt("SavedScore", 0);

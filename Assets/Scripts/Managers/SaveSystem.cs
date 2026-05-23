@@ -33,9 +33,10 @@ public class SaveSystem : MonoBehaviour
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
         {
-            PlayerPrefs.SetFloat("SavedPosX", player.transform.position.x);
-            PlayerPrefs.SetFloat("SavedPosY", player.transform.position.y + 1f);
-            PlayerPrefs.SetFloat("SavedPosZ", player.transform.position.z);
+            Vector3 safePosition = GetSafePlayerPosition(player.transform.position, player);
+            PlayerPrefs.SetFloat("SavedPosX", safePosition.x);
+            PlayerPrefs.SetFloat("SavedPosY", safePosition.y);
+            PlayerPrefs.SetFloat("SavedPosZ", safePosition.z);
         }
 
         SaveKeys();
@@ -81,14 +82,7 @@ public class SaveSystem : MonoBehaviour
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player == null) return;
 
-        float x = PlayerPrefs.GetFloat("SavedPosX", 0f);
-        float y = PlayerPrefs.GetFloat("SavedPosY", 1f);
-        float z = PlayerPrefs.GetFloat("SavedPosZ", 0f);
-
-        CharacterController cc = player.GetComponent<CharacterController>();
-        if (cc != null) cc.enabled = false;
-        player.transform.position = new Vector3(x, y, z);
-        StartCoroutine(ReEnableController(cc));
+        RestorePlayerToSavedPosition(player);
 
         if (HUDManager.Instance != null)
             HUDManager.Instance.SetScore(PlayerPrefs.GetInt("SavedScore", 0));
@@ -101,13 +95,56 @@ public class SaveSystem : MonoBehaviour
             Debug.Log("[SaveSystem] Restored keys — Red: " + hero.RedKey + "  Blue: " + hero.BlueKey);
         }
 
-        Debug.Log("[SaveSystem] Restored position to: " + x + ", " + y + ", " + z);
+        Debug.Log("[SaveSystem] Restored position to: " + player.transform.position);
     }
 
-    IEnumerator ReEnableController(CharacterController cc)
+    public void RestorePlayerToSavedPosition(GameObject player)
     {
+        if (player == null || !PlayerPrefs.HasKey("SavedPosX")) return;
+
+        Vector3 savedPosition = new Vector3(
+            PlayerPrefs.GetFloat("SavedPosX", 0f),
+            PlayerPrefs.GetFloat("SavedPosY", 1f),
+            PlayerPrefs.GetFloat("SavedPosZ", 0f));
+
+        CharacterController cc = player.GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+
+        player.transform.position = GetSafePlayerPosition(savedPosition, player);
+        StartCoroutine(ReEnableController(cc, player));
+    }
+
+    IEnumerator ReEnableController(CharacterController cc, GameObject player)
+    {
+        yield return new WaitForFixedUpdate();
         yield return null;
-        if (cc != null) cc.enabled = true;
+        if (cc != null)
+        {
+            player.transform.position = GetSafePlayerPosition(player.transform.position, player);
+            cc.enabled = true;
+        }
+    }
+
+    public static Vector3 GetSafePlayerPosition(Vector3 position, GameObject player)
+    {
+        CharacterController cc = player != null ? player.GetComponent<CharacterController>() : null;
+        float halfHeight = cc != null ? cc.height * 0.5f : 1f;
+        float skin = cc != null ? Mathf.Max(cc.skinWidth, 0.05f) : 0.1f;
+        int mask = Physics.DefaultRaycastLayers;
+
+        Transform playerTransform = player != null ? player.transform : null;
+        Vector3 rayStart = position + Vector3.up * 4f;
+        RaycastHit[] hits = Physics.RaycastAll(rayStart, Vector3.down, 12f, mask, QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider == null) continue;
+            if (playerTransform != null && (hit.transform == playerTransform || hit.transform.IsChildOf(playerTransform))) continue;
+            return hit.point + Vector3.up * (halfHeight + skin);
+        }
+
+        return position + Vector3.up * skin;
     }
 
     public void DeleteSave()
@@ -126,6 +163,7 @@ public class SaveSystem : MonoBehaviour
         PlayerPrefs.DeleteKey("KeyPickedUp_Key_02");
         PlayerPrefs.DeleteKey("Door_Door_01");
         PlayerPrefs.DeleteKey("Door_Door_02");
+        PlayerPrefs.DeleteKey("Door_Door_03");
         PlayerPrefs.DeleteKey("CoinsCollected");
         PlayerPrefs.Save();
     }

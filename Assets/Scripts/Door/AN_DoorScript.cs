@@ -21,6 +21,27 @@ public class AN_DoorScript : MonoBehaviour
     [Range(0f, 4f)]
     public float OpenSpeed = 3f;
 
+    // ── DOOR SOUNDS ───────────────────────────────────────────────
+    [Header("Door Sounds")]
+    [Tooltip("AudioSource on this door GameObject (3D)")]
+    public AudioSource doorAudioSource;
+
+    [Tooltip("Sound played when the door opens (e.g. Closing Door With Creak Latch Shut 3.wav used reversed, or Open Door X.wav)")]
+    public AudioClip openSound;
+
+    [Tooltip("Sound played when the door closes (e.g. Close Door 12.wav)")]
+    public AudioClip closeSound;
+
+    [Tooltip("Sound played when player tries to open a locked door (e.g. Close Metal Door Locker Cabinet Box 1.wav)")]
+    public AudioClip lockedSound;
+
+    [Tooltip("Sound played when a key unlocks the door")]
+    public AudioClip unlockSound;
+
+    [Range(0f, 1f)]
+    public float doorVolume = 0.8f;
+    // ─────────────────────────────────────────────────────────────
+
     private AN_HeroInteractive HeroInteractive;
     private Rigidbody rbDoor;
     private HingeJoint hinge;
@@ -34,6 +55,23 @@ public class AN_DoorScript : MonoBehaviour
         hinge = GetComponent<HingeJoint>();
         mainCam = Camera.main;
         HeroInteractive = Object.FindAnyObjectByType<AN_HeroInteractive>();
+
+        // Auto-create 3D AudioSource if not assigned
+        if (doorAudioSource == null)
+        {
+            doorAudioSource = gameObject.AddComponent<AudioSource>();
+            doorAudioSource.spatialBlend = 1f; // full 3D
+            doorAudioSource.rolloffMode = AudioRolloffMode.Linear;
+            doorAudioSource.minDistance = 1f;
+            doorAudioSource.maxDistance = 25f;
+            doorAudioSource.playOnAwake = false;
+        }
+        else
+        {
+            doorAudioSource.maxDistance = Mathf.Max(doorAudioSource.maxDistance, 25f);
+        }
+
+        LoadDefaultSounds();
 
         // Restore unlocked state after player death
         if (SaveSystem.Instance != null && SaveSystem.Instance.IsDoorUnlocked(doorID))
@@ -58,7 +96,12 @@ public class AN_DoorScript : MonoBehaviour
 
     public void Action()
     {
-        if (Locked || !CanOpen) return;
+        // Hard locked — play locked sound and stop
+        if (Locked || !CanOpen)
+        {
+            PlayDoorSoundAudible(lockedSound);
+            return;
+        }
 
         // Try to unlock with keys
         if (HeroInteractive != null)
@@ -67,6 +110,7 @@ public class AN_DoorScript : MonoBehaviour
             {
                 RedLocked = false;
                 HeroInteractive.RedKey = false;
+                PlayDoorSoundAudible(unlockSound);
                 if (SaveSystem.Instance != null)
                 {
                     SaveSystem.Instance.SaveDoorUnlocked(doorID);
@@ -77,6 +121,7 @@ public class AN_DoorScript : MonoBehaviour
             {
                 BlueLocked = false;
                 HeroInteractive.BlueKey = false;
+                PlayDoorSoundAudible(unlockSound);
                 if (SaveSystem.Instance != null)
                 {
                     SaveSystem.Instance.SaveDoorUnlocked(doorID);
@@ -85,9 +130,11 @@ public class AN_DoorScript : MonoBehaviour
             }
         }
 
-        // Still locked by key
+        // Still locked by key — play locked sound
         if (RedLocked || BlueLocked)
         {
+            PlayDoorSoundAudible(lockedSound);
+
             if (HUDManager.Instance != null)
                 HUDManager.Instance.ShowTimedMessage("You need a key!", 2f);
             return;
@@ -95,14 +142,58 @@ public class AN_DoorScript : MonoBehaviour
 
         // Open or close
         if (isOpened && CanClose)
+        {
             isOpened = false;
+            PlayDoorSound(closeSound);     // <-- close sound
+        }
         else if (!isOpened)
         {
             isOpened = true;
+            PlayDoorSound(openSound);      // <-- open sound
+
             if (rbDoor != null)
                 rbDoor.AddRelativeTorque(new Vector3(0, 0, 20f));
         }
     }
+
+    // ── DOOR SOUND HELPER ─────────────────────────────────────────
+    AudioClip PlayDoorSound(AudioClip clip)
+    {
+        if (clip == null)
+        {
+            LoadDefaultSounds();
+            clip = openSound;
+        }
+        if (doorAudioSource == null || clip == null) return clip;
+        doorAudioSource.pitch = Random.Range(0.95f, 1.05f); // subtle variation per door
+        doorAudioSource.PlayOneShot(clip, doorVolume);
+        return clip;
+    }
+
+    void PlayDoorSoundAudible(AudioClip clip)
+    {
+        clip = PlayDoorSound(clip);
+        TempleAudio.PlaySfx(clip, doorVolume);
+    }
+
+    public void PlayUnlockSound()
+    {
+        LoadDefaultSounds();
+        PlayDoorSoundAudible(unlockSound);
+    }
+
+    void LoadDefaultSounds()
+    {
+        if (openSound == null)
+            openSound = TempleAudio.LoadClip("TempleAudio/SFX/Open Door 13");
+        if (closeSound == null)
+            closeSound = TempleAudio.LoadClip("TempleAudio/SFX/Close Door 12");
+        if (lockedSound == null)
+            lockedSound = TempleAudio.LoadClip("TempleAudio/SFX/Locked Door 2");
+        if (unlockSound == null)
+            unlockSound = TempleAudio.LoadClip("TempleAudio/SFX/Unlock 1");
+    }
+    // ─────────────────────────────────────────────────────────────
 
     bool NearView()
     {

@@ -12,6 +12,11 @@ public class EnemyHealth : MonoBehaviour
     [Tooltip("Drag the EnemyRoom that owns this enemy here")]
     public EnemyRoom enemyRoom;
 
+    [Header("Audio")]
+    public AudioClip deathSound;
+    [Range(0f, 1f)]
+    public float deathVolume = 0.9f;
+
     private Animator anim;
     private EnemyAI ai;
     private bool isDead = false;
@@ -25,6 +30,8 @@ public class EnemyHealth : MonoBehaviour
         // Auto-find room if not assigned in Inspector
         if (enemyRoom == null)
             enemyRoom = GetComponentInParent<EnemyRoom>();
+
+        LoadDefaultSound();
     }
 
     public void TakeDamage(float amount)
@@ -45,6 +52,11 @@ public class EnemyHealth : MonoBehaviour
 
         UnityEngine.AI.NavMeshAgent agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
         if (agent != null) agent.enabled = false;
+
+        // Death animation
+        LoadDefaultSound();
+        if (deathSound != null)
+            AudioSource.PlayClipAtPoint(deathSound, transform.position, deathVolume);
 
         // Death animation
         if (anim != null)
@@ -68,4 +80,10 @@ public class EnemyHealth : MonoBehaviour
     }
 
     public bool IsDead() { return isDead; }
+
+    void LoadDefaultSound()
+    {
+        if (deathSound == null)
+            deathSound = TempleAudio.LoadClip("TempleAudio/Enemy/freesound_community-bones-2-88481");
+    }
 }
