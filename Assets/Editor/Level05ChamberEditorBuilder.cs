@@ -59,6 +59,7 @@ public static class Level05ChamberEditorBuilder
         RebuildOutdatedLayoutIfNeeded();
         GameObject root = Level05ChamberBuilder.BuildIfNeeded(activeScene.name, false);
         bool copiedSystems = CopyLevelOneSystemsIntoLevel05(activeScene, false);
+        Level05ChamberBuilder.ApplyLevelOneAtmosphere();
         if (root != null || copiedSystems)
         {
             EditorSceneManager.MarkSceneDirty(activeScene);
@@ -89,6 +90,7 @@ public static class Level05ChamberEditorBuilder
 
         GameObject root = Level05ChamberBuilder.BuildIfNeeded(activeScene.name, false);
         bool copiedSystems = CopyLevelOneSystemsIntoLevel05(activeScene, true);
+        Level05ChamberBuilder.ApplyLevelOneAtmosphere();
         if (root != null)
         {
             Selection.activeGameObject = root;
@@ -135,6 +137,7 @@ public static class Level05ChamberEditorBuilder
 
         GameObject root = Level05ChamberBuilder.BuildIfNeeded(SceneName, true);
         bool copiedSystems = CopyLevelOneSystemsIntoLevel05(scene, true);
+        Level05ChamberBuilder.ApplyLevelOneAtmosphere();
         if (root != null || copiedSystems)
         {
             EditorSceneManager.MarkSceneDirty(scene);
@@ -226,18 +229,33 @@ public static class Level05ChamberEditorBuilder
 
     private static bool HasCopiedLevelOneSystems(Scene targetScene)
     {
+        GameObject player = FindScenePlayer(targetScene);
+        if (player == null || player.GetComponentInChildren<Camera>(true) == null)
+        {
+            return false;
+        }
+
         return FindSceneObject(targetScene, CopiedSystemsMarkerName) != null
             && FindSceneObject(targetScene, "HUDCanvas") != null
             && FindSceneObject(targetScene, "HUDManager") != null
-            && FindSceneObject(targetScene, "EventSystem") != null
-            && FindSceneObject(targetScene, "Player") != null
-            && FindSceneObject(targetScene, "PlayerCamera") != null;
+            && FindSceneObject(targetScene, "EventSystem") != null;
     }
 
     private static void DestroyLevelFiveGeneratedSystems(Scene targetScene)
     {
+        GameObject player;
+        while ((player = FindScenePlayer(targetScene)) != null)
+        {
+            Object.DestroyImmediate(player);
+        }
+
         foreach (string objectName in LevelFiveGeneratedSystemNames)
         {
+            if (objectName == "Player" || objectName == "PlayerBody" || objectName == "Main Camera" || objectName == "PlayerCamera")
+            {
+                continue;
+            }
+
             GameObject objectToDestroy = FindSceneObject(targetScene, objectName);
             while (objectToDestroy != null)
             {
@@ -245,6 +263,29 @@ public static class Level05ChamberEditorBuilder
                 objectToDestroy = FindSceneObject(targetScene, objectName);
             }
         }
+    }
+
+    private static GameObject FindScenePlayer(Scene scene)
+    {
+        if (!scene.IsValid())
+        {
+            return null;
+        }
+
+        foreach (GameObject rootObject in scene.GetRootGameObjects())
+        {
+            if (!rootObject.CompareTag("Player"))
+            {
+                continue;
+            }
+
+            if (rootObject.GetComponent<PlayerMovement>() != null && rootObject.GetComponent<AN_HeroInteractive>() != null)
+            {
+                return rootObject;
+            }
+        }
+
+        return null;
     }
 
     private static GameObject CopySceneObject(Scene sourceScene, Scene targetScene, string objectName)
@@ -355,7 +396,7 @@ public static class Level05ChamberEditorBuilder
         Rigidbody body = player.GetComponent<Rigidbody>();
         if (body != null)
         {
-            body.velocity = Vector3.zero;
+            body.linearVelocity = Vector3.zero;
             body.angularVelocity = Vector3.zero;
         }
 
