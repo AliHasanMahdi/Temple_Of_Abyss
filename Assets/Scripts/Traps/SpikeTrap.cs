@@ -48,14 +48,5 @@ public class SpikeTrap : MonoBehaviour
         }
     }
 
-    void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Player"))
-        {
-            // Damage the player
-            PlayerHealth health = other.GetComponent<PlayerHealth>();
-            if (health != null)
-                health.TakeDamage(damage);
-        }
-    }
+    
 }
