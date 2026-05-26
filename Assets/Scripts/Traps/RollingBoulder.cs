@@ -14,13 +14,17 @@ public class RollingBoulder : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        rb.isKinematic = true; // stays still until triggered
-        player = GameObject.FindGameObjectWithTag("Player").transform;
+        if (rb != null)
+            rb.isKinematic = true; // stays still until triggered
+
+        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+        if (playerObject != null)
+            player = playerObject.transform;
     }
 
     void Update()
     {
-        if (!isRolling && player != null)
+        if (!isRolling && player != null && rb != null)
         {
             // Start rolling when player gets close
             float distance = Vector3.Distance(transform.position, player.position);
@@ -37,7 +41,10 @@ public class RollingBoulder : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Player"))
         {
-            PlayerHealth health = collision.gameObject.GetComponent<PlayerHealth>();
+            PlayerHealth health = collision.gameObject.GetComponent<PlayerHealth>()
+                               ?? collision.gameObject.GetComponentInParent<PlayerHealth>()
+                               ?? collision.gameObject.GetComponentInChildren<PlayerHealth>();
+
             if (health != null)
                 health.TakeDamage(damage);
         }

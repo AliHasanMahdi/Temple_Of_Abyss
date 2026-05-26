@@ -21,6 +21,8 @@ public class PlayerMovement : MonoBehaviour
     public float jumpBufferTime = 0.15f;
     public float fallMultiplier = 2.5f;
     public float lowJumpMultiplier = 2f;
+    public float groundCheckDistance = 0.2f;
+    public LayerMask groundMask = ~0;
 
     [Header("Crouch")]
     public float crouchHeight = 1f;
@@ -36,22 +38,34 @@ public class PlayerMovement : MonoBehaviour
     public float bobSpeed = 14f;
     public float bobAmount = 0.05f;
 
-    private CharacterController controller;
-    private PauseMenu pauseMenu;
-    private Vector3 velocity;
-    private float xRotation;
-    private bool isGrounded;
-    private bool isCrouching;
-    private float coyoteTimer;
-    private float jumpBufferTimer;
-    private float originalHeight;
-    private float targetHeight;
-    private Vector3 originalCameraPos;
-    private Vector3 crouchCameraPos;
-    private Vector3 targetCameraPos;
-    private float bobTimer;
-    private float moveInputMagnitude;
-    private bool isRunning;
+    [Header("Footstep Sounds")]
+    public AudioSource footstepAudioSource;
+    public AudioClip[] walkFootstepClips;
+    public AudioClip[] runFootstepClips;
+    public float walkStepRate = 1.8f;
+    public float runStepRate = 2.8f;
+
+    [Range(0f, 1f)]
+    public float footstepVolume = 0.5f;
+
+    CharacterController controller;
+    PauseMenu pauseMenu;
+    Vector3 velocity;
+    float xRotation;
+    bool isGrounded;
+    bool isCrouching;
+    float coyoteTimer;
+    float jumpBufferTimer;
+    float originalHeight;
+    float targetHeight;
+    Vector3 originalCameraPos;
+    Vector3 crouchCameraPos;
+    Vector3 targetCameraPos;
+    float bobTimer;
+    float moveInputMagnitude;
+    bool isRunning;
+    float footstepTimer;
+    bool hasMovementInput;
 
     public bool IsGrounded => isGrounded;
     public bool IsMoving => moveInputMagnitude > 0.1f;
@@ -63,6 +77,7 @@ public class PlayerMovement : MonoBehaviour
     void Start()
     {
         Time.timeScale = 1f;
+
         controller = GetComponent<CharacterController>();
         pauseMenu = FindFirstObjectByType<PauseMenu>();
 
@@ -79,13 +94,48 @@ public class PlayerMovement : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        if (footstepAudioSource == null)
+        {
+            footstepAudioSource = gameObject.AddComponent<AudioSource>();
+            footstepAudioSource.spatialBlend = 0f;
+            footstepAudioSource.playOnAwake = false;
+        }
+
+        if (!HasPlayableClips(walkFootstepClips))
+        {
+            walkFootstepClips = TempleAudio.LoadClips(
+                "TempleAudio/Footsteps/Footstep_Boots_01",
+                "TempleAudio/Footsteps/Footstep_Boots_02",
+                "TempleAudio/Footsteps/Footstep_Boots_03",
+                "TempleAudio/Footsteps/Footstep_Boots_04",
+                "TempleAudio/Footsteps/Footstep_Boots_05",
+                "TempleAudio/Footsteps/Footstep_Boots_06",
+                "TempleAudio/Footsteps/Footstep_Boots_07");
+        }
+
+        if (!HasPlayableClips(runFootstepClips))
+        {
+            runFootstepClips = TempleAudio.LoadClips(
+                "TempleAudio/Footsteps/Footstep_Deep_01",
+                "TempleAudio/Footsteps/Footstep_Deep_02",
+                "TempleAudio/Footsteps/Footstep_Deep_03",
+                "TempleAudio/Footsteps/Footstep_Deep_04",
+                "TempleAudio/Footsteps/Footstep_Deep_05",
+                "TempleAudio/Footsteps/Footstep_Deep_06",
+                "TempleAudio/Footsteps/Footstep_Deep_07");
+        }
+    }
+
+    void OnEnable()
+    {
+        controller = GetComponent<CharacterController>();
     }
 
     void Update()
     {
         pauseMenu ??= FindFirstObjectByType<PauseMenu>();
-
-        if (pauseMenu != null && pauseMenu.IsPaused)
+        if ((pauseMenu != null && pauseMenu.IsPaused) || Time.timeScale == 0f)
             return;
 
         HandleLook();
@@ -94,6 +144,7 @@ public class PlayerMovement : MonoBehaviour
         HandleCrouch();
         HandleHeadBob();
         HandleFOV();
+        HandleFootsteps();
     }
 
     void EnsureFirstPersonCamera()
@@ -190,23 +241,24 @@ public class PlayerMovement : MonoBehaviour
         if (mouseDelta.sqrMagnitude <= 0f)
             return;
 
-        float mouseX = mouseDelta.x;
-        float mouseY = mouseDelta.y;
-
-        xRotation -= mouseY;
+        xRotation -= mouseDelta.y;
         xRotation = Mathf.Clamp(xRotation, -85f, 85f);
 
         playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
-        transform.Rotate(Vector3.up * mouseX);
+        transform.Rotate(Vector3.up * mouseDelta.x);
     }
 
     void HandleMovement()
     {
+        if (controller == null || !controller.enabled)
+            return;
+
         Vector2 moveInput = ReadMoveInput();
         float moveX = moveInput.x;
         float moveZ = moveInput.y;
 
-        bool isSprinting = IsSprintPressed();
+        hasMovementInput = moveInput.sqrMagnitude > 0.01f;
+        bool isSprinting = IsSprintPressed() && hasMovementInput && !isCrouching;
         float speed = isCrouching ? walkSpeed * 0.5f : isSprinting ? runSpeed : walkSpeed;
 
         Vector3 move = (transform.right * moveX + transform.forward * moveZ).normalized;
@@ -287,7 +339,10 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleGravity()
     {
-        isGrounded = controller.isGrounded;
+        if (controller == null || !controller.enabled)
+            return;
+
+        isGrounded = controller.isGrounded || IsTouchingGround();
 
         if (isGrounded)
         {
@@ -325,6 +380,35 @@ public class PlayerMovement : MonoBehaviour
         controller.Move(velocity * Time.deltaTime);
     }
 
+    bool IsTouchingGround()
+    {
+        Vector3 center = transform.TransformPoint(controller.center);
+        float bottomOffset = (controller.height * 0.5f) - controller.radius;
+        float checkRadius = Mathf.Max(0.05f, controller.radius * 0.9f);
+        float checkDistance = bottomOffset + groundCheckDistance;
+
+        RaycastHit[] hits = Physics.SphereCastAll(
+            center,
+            checkRadius,
+            Vector3.down,
+            checkDistance,
+            groundMask,
+            QueryTriggerInteraction.Ignore);
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider == null)
+                continue;
+
+            if (hit.transform == transform || hit.transform.IsChildOf(transform))
+                continue;
+
+            return true;
+        }
+
+        return false;
+    }
+
     void HandleCrouch()
     {
         bool crouchPressed = IsCrouchPressed();
@@ -347,7 +431,7 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleHeadBob()
     {
-        if (playerCamera == null)
+        if (playerCamera == null || controller == null)
             return;
 
         float moveAmount = new Vector3(controller.velocity.x, 0f, controller.velocity.z).magnitude;
@@ -373,8 +457,72 @@ public class PlayerMovement : MonoBehaviour
         if (cam == null)
             return;
 
-        bool isSprinting = IsSprintPressed();
-        float targetFOVValue = isSprinting ? sprintFOV : normalFOV;
-        cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOVValue, fovSpeed * Time.deltaTime);
+        bool isSprinting = IsSprintPressed() && !isCrouching && moveInputMagnitude > 0.1f;
+        float targetFovValue = isSprinting ? sprintFOV : normalFOV;
+        cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFovValue, fovSpeed * Time.deltaTime);
+    }
+
+    void HandleFootsteps()
+    {
+        if (!isGrounded || footstepAudioSource == null)
+            return;
+
+        if (!hasMovementInput)
+        {
+            footstepTimer = 0f;
+            return;
+        }
+
+        bool sprinting = IsSprintPressed() && !isCrouching;
+        float stepRate = sprinting ? runStepRate : walkStepRate;
+        AudioClip[] clips = sprinting && HasPlayableClips(runFootstepClips) ? runFootstepClips : walkFootstepClips;
+
+        footstepTimer += Time.deltaTime;
+        if (footstepTimer >= 1f / stepRate)
+        {
+            footstepTimer = 0f;
+            PlayRandomFootstep(clips);
+        }
+    }
+
+    void PlayRandomFootstep(AudioClip[] clips)
+    {
+        if (!HasPlayableClips(clips))
+            return;
+
+        AudioClip clip = clips[Random.Range(0, clips.Length)];
+        for (int i = 0; clip == null && i < clips.Length; i++)
+            clip = clips[i];
+
+        footstepAudioSource.pitch = Random.Range(0.92f, 1.08f);
+        footstepAudioSource.PlayOneShot(clip, footstepVolume);
+    }
+
+    bool HasPlayableClips(AudioClip[] clips)
+    {
+        if (clips == null || clips.Length == 0)
+            return false;
+
+        foreach (AudioClip clip in clips)
+        {
+            if (clip != null)
+                return true;
+        }
+
+        return false;
+    }
+
+    public void OnPause()
+    {
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        velocity = Vector3.zero;
+    }
+
+    public void OnResume()
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+        velocity = Vector3.zero;
     }
 }

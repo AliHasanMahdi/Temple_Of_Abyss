@@ -1,21 +1,32 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class HUDManager : MonoBehaviour
 {
     public static HUDManager Instance;
 
+    [Header("Health Bar")]
+    public Image hpFill;
     public Slider healthBar;
-    public TMP_Text scoreText;
-    public TMP_Text checkpointText;
 
-    private TMP_Text controlsText;
-    private TMP_Text crosshairText;
-    private TMP_Text interactionPromptText;
-    private Canvas hudCanvas;
-    private int score;
+    [Header("Score")]
+    public Image scoreImage;
+    public TMP_Text scoreText;
+
+    [Header("Messages")]
+    public TMP_Text checkpointText;
+    public GameObject messageBackground;
+
+    [Header("Interact Prompt")]
+    public TMP_Text interactPromptText;
+    public GameObject interactBackground;
+
+    int score;
+    Coroutine messageCoroutine;
+    bool hudVisible = true;
 
     void Awake()
     {
@@ -26,245 +37,94 @@ public class HUDManager : MonoBehaviour
         }
 
         Instance = this;
-        EnsureReferences();
+        DontDestroyOnLoad(gameObject);
+        AutoBindAll();
     }
 
     void Start()
     {
-        RefreshScoreText();
+        AutoBindAll();
+        ApplyScoreText();
+
+        if (interactPromptText != null)
+            interactPromptText.gameObject.SetActive(false);
+
+        if (interactBackground != null)
+            interactBackground.SetActive(false);
 
         if (checkpointText != null)
             checkpointText.gameObject.SetActive(false);
+
+        if (messageBackground != null)
+            messageBackground.SetActive(false);
+
+        string sceneName = SceneManager.GetActiveScene().name;
+        ShowHUD(sceneName != "MainMenu" && sceneName != "GameOver");
     }
 
-    void EnsureReferences()
+    void OnEnable()
     {
-        hudCanvas = FindCanvas("HUDCanvas");
-        if (hudCanvas == null)
-            hudCanvas = CreateCanvas("HUDCanvas");
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
 
-        RectTransform canvasRect = hudCanvas.GetComponent<RectTransform>();
-        if (canvasRect != null)
-            canvasRect.localScale = Vector3.one;
+    void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
 
-        healthBar ??= FindObjectByName<Slider>("HealthBar");
-        scoreText ??= FindObjectByName<TMP_Text>("ScoreText");
-        checkpointText ??= FindObjectByName<TMP_Text>("CheckpointText");
-        controlsText ??= FindObjectByName<TMP_Text>("ControlsText");
-        crosshairText ??= FindObjectByName<TMP_Text>("Crosshair");
-        interactionPromptText ??= FindObjectByName<TMP_Text>("InteractionPromptText");
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        AutoBindAll();
+        ApplyScoreText();
+        ShowHUD(scene.name != "MainMenu" && scene.name != "GameOver");
 
-        if (healthBar == null)
-            healthBar = CreateHealthBar(hudCanvas.transform);
+        PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+        if (playerHealth != null)
+            UpdateHealth(playerHealth.currentHealth, playerHealth.maxHealth);
+    }
 
-        if (scoreText == null)
+    public void ShowHUD(bool show)
+    {
+        hudVisible = show;
+
+        SetUIActive(healthBar != null ? healthBar.gameObject : null, show);
+        SetUIActive(hpFill != null && hpFill.transform.parent != null ? hpFill.transform.parent.gameObject : null, show);
+        SetUIActive(scoreImage != null ? scoreImage.gameObject : null, show);
+        SetUIActive(scoreText != null ? scoreText.gameObject : null, show);
+
+        if (!show)
         {
-            scoreText = CreateLabel(
-                "ScoreText",
-                hudCanvas.transform,
-                new Vector2(16f, -72f),
-                new Vector2(220f, 28f),
-                "Score: 0",
-                24f,
-                TextAlignmentOptions.Left);
+            if (checkpointText != null)
+                checkpointText.gameObject.SetActive(false);
+
+            if (messageBackground != null)
+                messageBackground.SetActive(false);
+
+            HideInteractPrompt();
         }
-
-        if (checkpointText == null)
-        {
-            checkpointText = CreateLabel(
-                "CheckpointText",
-                hudCanvas.transform,
-                new Vector2(0f, -40f),
-                new Vector2(420f, 36f),
-                "Checkpoint Reached!",
-                28f,
-                TextAlignmentOptions.Center,
-                new Vector2(0.5f, 1f));
-        }
-
-        if (controlsText == null)
-        {
-            controlsText = CreateLabel(
-                "ControlsText",
-                hudCanvas.transform,
-                new Vector2(16f, 16f),
-                new Vector2(360f, 130f),
-                "WASD Move\nMouse Look\nShift Sprint\nSpace Jump\nC Crouch\nE Interact\nEsc Pause",
-                20f,
-                TextAlignmentOptions.BottomLeft,
-                new Vector2(0f, 0f),
-                new Vector2(0f, 0f));
-        }
-
-        if (crosshairText == null)
-        {
-            crosshairText = CreateLabel(
-                "Crosshair",
-                hudCanvas.transform,
-                Vector2.zero,
-                new Vector2(32f, 32f),
-                "+",
-                28f,
-                TextAlignmentOptions.Center,
-                new Vector2(0.5f, 0.5f));
-        }
-
-        if (interactionPromptText == null)
-        {
-            interactionPromptText = CreateLabel(
-                "InteractionPromptText",
-                hudCanvas.transform,
-                new Vector2(0f, 120f),
-                new Vector2(520f, 40f),
-                string.Empty,
-                24f,
-                TextAlignmentOptions.Center,
-                new Vector2(0.5f, 0.5f));
-        }
-
-        healthBar.minValue = 0f;
-        healthBar.maxValue = 100f;
-        healthBar.value = 100f;
-        interactionPromptText.gameObject.SetActive(false);
-    }
-
-    Canvas FindCanvas(string objectName)
-    {
-        GameObject target = GameObject.Find(objectName);
-        return target != null ? target.GetComponent<Canvas>() : null;
-    }
-
-    T FindObjectByName<T>(string objectName) where T : Component
-    {
-        GameObject target = GameObject.Find(objectName);
-        return target != null ? target.GetComponent<T>() : null;
-    }
-
-    Canvas CreateCanvas(string canvasName)
-    {
-        GameObject canvasObject = new GameObject(canvasName, typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-        Canvas canvas = canvasObject.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        scaler.matchWidthOrHeight = 0.5f;
-
-        RectTransform rect = canvasObject.GetComponent<RectTransform>();
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
-        rect.localScale = Vector3.one;
-
-        return canvas;
-    }
-
-    Slider CreateHealthBar(Transform parent)
-    {
-        GameObject sliderObject = new GameObject("HealthBar", typeof(RectTransform), typeof(Slider));
-        sliderObject.transform.SetParent(parent, false);
-
-        RectTransform sliderRect = sliderObject.GetComponent<RectTransform>();
-        sliderRect.anchorMin = new Vector2(0f, 1f);
-        sliderRect.anchorMax = new Vector2(0f, 1f);
-        sliderRect.pivot = new Vector2(0f, 1f);
-        sliderRect.anchoredPosition = new Vector2(16f, -16f);
-        sliderRect.sizeDelta = new Vector2(280f, 24f);
-
-        GameObject backgroundObject = new GameObject("Background", typeof(RectTransform), typeof(Image));
-        backgroundObject.transform.SetParent(sliderObject.transform, false);
-        RectTransform backgroundRect = backgroundObject.GetComponent<RectTransform>();
-        backgroundRect.anchorMin = Vector2.zero;
-        backgroundRect.anchorMax = Vector2.one;
-        backgroundRect.offsetMin = Vector2.zero;
-        backgroundRect.offsetMax = Vector2.zero;
-        Image backgroundImage = backgroundObject.GetComponent<Image>();
-        backgroundImage.color = new Color(0.1f, 0.1f, 0.14f, 0.9f);
-
-        GameObject fillAreaObject = new GameObject("Fill Area", typeof(RectTransform));
-        fillAreaObject.transform.SetParent(sliderObject.transform, false);
-        RectTransform fillAreaRect = fillAreaObject.GetComponent<RectTransform>();
-        fillAreaRect.anchorMin = Vector2.zero;
-        fillAreaRect.anchorMax = Vector2.one;
-        fillAreaRect.offsetMin = new Vector2(4f, 4f);
-        fillAreaRect.offsetMax = new Vector2(-4f, -4f);
-
-        GameObject fillObject = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-        fillObject.transform.SetParent(fillAreaObject.transform, false);
-        RectTransform fillRect = fillObject.GetComponent<RectTransform>();
-        fillRect.anchorMin = Vector2.zero;
-        fillRect.anchorMax = Vector2.one;
-        fillRect.offsetMin = Vector2.zero;
-        fillRect.offsetMax = Vector2.zero;
-        Image fillImage = fillObject.GetComponent<Image>();
-        fillImage.color = new Color(0.82f, 0.18f, 0.16f, 1f);
-
-        Slider slider = sliderObject.GetComponent<Slider>();
-        slider.transition = Selectable.Transition.None;
-        slider.fillRect = fillRect;
-        slider.targetGraphic = fillImage;
-        slider.direction = Slider.Direction.LeftToRight;
-
-        return slider;
-    }
-
-    TMP_Text CreateLabel(
-        string objectName,
-        Transform parent,
-        Vector2 anchoredPosition,
-        Vector2 size,
-        string value,
-        float fontSize,
-        TextAlignmentOptions alignment,
-        Vector2? anchor = null,
-        Vector2? pivot = null)
-    {
-        GameObject labelObject = new GameObject(objectName, typeof(RectTransform), typeof(TextMeshProUGUI));
-        labelObject.transform.SetParent(parent, false);
-
-        RectTransform rect = labelObject.GetComponent<RectTransform>();
-        Vector2 resolvedAnchor = anchor ?? new Vector2(0f, 1f);
-        Vector2 resolvedPivot = pivot ?? resolvedAnchor;
-        rect.anchorMin = resolvedAnchor;
-        rect.anchorMax = resolvedAnchor;
-        rect.pivot = resolvedPivot;
-        rect.anchoredPosition = anchoredPosition;
-        rect.sizeDelta = size;
-
-        TextMeshProUGUI text = labelObject.GetComponent<TextMeshProUGUI>();
-        text.font = TMP_Settings.defaultFontAsset;
-        text.text = value;
-        text.fontSize = fontSize;
-        text.alignment = alignment;
-        text.color = Color.white;
-        text.raycastTarget = false;
-
-        return text;
     }
 
     public void UpdateHealth(float current, float max)
     {
-        EnsureReferences();
-
-        if (healthBar == null || max <= 0f)
+        AutoBindHealthBar();
+        if (max <= 0f)
             return;
 
-        healthBar.value = Mathf.Clamp((current / max) * 100f, 0f, 100f);
+        float ratio = Mathf.Clamp01(current / max);
+        if (hpFill != null)
+            hpFill.fillAmount = ratio;
+
+        if (healthBar != null)
+        {
+            healthBar.maxValue = 1f;
+            healthBar.value = ratio;
+        }
     }
 
     public void AddScore(int amount)
     {
         score += amount;
-        RefreshScoreText();
-    }
-
-    void RefreshScoreText()
-    {
-        if (scoreText != null)
-            scoreText.text = "Score: " + score;
+        ApplyScoreText();
     }
 
     public int GetScore()
@@ -272,37 +132,208 @@ public class HUDManager : MonoBehaviour
         return score;
     }
 
-    public void ShowCheckpointMessage()
+    public void SetScore(int value)
     {
-        if (checkpointText == null)
-            return;
-
-        StopAllCoroutines();
-        StartCoroutine(ShowMessage());
+        score = value;
+        ApplyScoreText();
     }
 
-    IEnumerator ShowMessage()
+    public void ShowInteractPrompt(string message)
     {
-        checkpointText.text = "Checkpoint Reached!";
-        checkpointText.gameObject.SetActive(true);
-        yield return new WaitForSeconds(2f);
-        checkpointText.gameObject.SetActive(false);
+        AutoBindPrompt();
+        if (interactPromptText != null)
+        {
+            interactPromptText.text = message;
+            interactPromptText.gameObject.SetActive(!string.IsNullOrEmpty(message) && hudVisible);
+        }
+
+        if (interactBackground != null)
+            interactBackground.SetActive(!string.IsNullOrEmpty(message) && hudVisible);
+    }
+
+    public void HideInteractPrompt()
+    {
+        if (interactPromptText != null)
+            interactPromptText.gameObject.SetActive(false);
+
+        if (interactBackground != null)
+            interactBackground.SetActive(false);
     }
 
     public void ShowInteractionPrompt(string prompt)
     {
-        EnsureReferences();
-
-        if (interactionPromptText == null)
-            return;
-
-        interactionPromptText.text = prompt;
-        interactionPromptText.gameObject.SetActive(!string.IsNullOrEmpty(prompt));
+        ShowInteractPrompt(prompt);
     }
 
     public void HideInteractionPrompt()
     {
-        if (interactionPromptText != null)
-            interactionPromptText.gameObject.SetActive(false);
+        HideInteractPrompt();
+    }
+
+    public void ShowCheckpointMessage()
+    {
+        ShowTimedMessage("Checkpoint Reached!", 2f);
+    }
+
+    public void ShowKeyMessage(bool isRedKey)
+    {
+        ShowTimedMessage(isRedKey ? "Red Key collected!" : "Blue Key collected!", 2f);
+    }
+
+    public void ShowTimedMessage(string message, float duration)
+    {
+        AutoBindMessages();
+        if (checkpointText == null || !hudVisible)
+            return;
+
+        if (messageCoroutine != null)
+            StopCoroutine(messageCoroutine);
+
+        messageCoroutine = StartCoroutine(MessageRoutine(message, duration));
+    }
+
+    IEnumerator MessageRoutine(string message, float duration)
+    {
+        checkpointText.text = message;
+        checkpointText.gameObject.SetActive(true);
+
+        if (messageBackground != null)
+            messageBackground.SetActive(true);
+
+        yield return new WaitForSeconds(duration);
+
+        checkpointText.gameObject.SetActive(false);
+        if (messageBackground != null)
+            messageBackground.SetActive(false);
+
+        messageCoroutine = null;
+    }
+
+    void ApplyScoreText()
+    {
+        AutoBindScoreRefs();
+        if (scoreText != null)
+            scoreText.text = "Score: " + score;
+    }
+
+    void AutoBindAll()
+    {
+        AutoBindHealthBar();
+        AutoBindScoreRefs();
+        AutoBindMessages();
+        AutoBindPrompt();
+    }
+
+    void AutoBindHealthBar()
+    {
+        if (healthBar == null)
+        {
+            Slider[] sliders = FindObjectsByType<Slider>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (Slider slider in sliders)
+            {
+                if (slider.name == "HealthBar" || slider.name.Contains("Health"))
+                {
+                    healthBar = slider;
+                    break;
+                }
+            }
+        }
+
+        if (hpFill == null && healthBar != null && healthBar.fillRect != null)
+            hpFill = healthBar.fillRect.GetComponent<Image>();
+
+        if (hpFill == null)
+        {
+            Image[] images = FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (Image image in images)
+            {
+                if (image.name == "Hp_Fill" || image.name == "HP_Fill" || image.name == "HealthFill")
+                {
+                    hpFill = image;
+                    break;
+                }
+            }
+        }
+    }
+
+    void AutoBindScoreRefs()
+    {
+        if (scoreText == null)
+        {
+            TMP_Text[] texts = FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (TMP_Text text in texts)
+            {
+                if (text.name == "ScoreText")
+                {
+                    scoreText = text;
+                    break;
+                }
+            }
+        }
+
+        if (scoreImage == null)
+        {
+            Image[] images = FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (Image image in images)
+            {
+                if (image.name == "ScoreImage")
+                {
+                    scoreImage = image;
+                    break;
+                }
+            }
+        }
+    }
+
+    void AutoBindMessages()
+    {
+        if (checkpointText == null)
+        {
+            TMP_Text[] texts = FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (TMP_Text text in texts)
+            {
+                if (text.name == "CheckpointText")
+                {
+                    checkpointText = text;
+                    break;
+                }
+            }
+        }
+
+        if (messageBackground == null)
+        {
+            GameObject found = GameObject.Find("MessageBackground");
+            if (found != null)
+                messageBackground = found;
+        }
+    }
+
+    void AutoBindPrompt()
+    {
+        if (interactPromptText == null)
+        {
+            TMP_Text[] texts = FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (TMP_Text text in texts)
+            {
+                if (text.name == "InteractionPromptText" || text.name == "InteractPromptText")
+                {
+                    interactPromptText = text;
+                    break;
+                }
+            }
+        }
+
+        if (interactBackground == null)
+        {
+            GameObject found = GameObject.Find("InteractBackground");
+            if (found != null)
+                interactBackground = found;
+        }
+    }
+
+    void SetUIActive(GameObject target, bool active)
+    {
+        if (target != null && target != gameObject)
+            target.SetActive(active);
     }
 }

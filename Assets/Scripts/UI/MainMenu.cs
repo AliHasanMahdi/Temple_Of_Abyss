@@ -11,13 +11,9 @@ public class MainMenu : MonoBehaviour
     public Button settingsButton;
     public Button quitButton;
 
-    [Header("Panels")]
-    public GameObject settingsPanel;
-
     [Header("Load Game Info")]
     public TMP_Text loadGameText;
-
-    private bool listenersBound;
+    public GameObject settingsPanel;
 
     void Awake()
     {
@@ -28,12 +24,19 @@ public class MainMenu : MonoBehaviour
     void Start()
     {
         Time.timeScale = 1f;
-        BindButtons();
+
+        if (HUDManager.Instance != null)
+            HUDManager.Instance.ShowHUD(false);
 
         if (settingsPanel != null)
             settingsPanel.SetActive(false);
 
         CheckSaveFile();
+
+        AddButtonListener(newGameButton, NewGame);
+        AddButtonListener(loadGameButton, LoadGame);
+        AddButtonListener(settingsButton, OpenSettings);
+        AddButtonListener(quitButton, QuitGame);
     }
 
     void EnsureSaveSystemExists()
@@ -62,42 +65,21 @@ public class MainMenu : MonoBehaviour
         return target != null ? target.GetComponent<Button>() : null;
     }
 
-    void BindButtons()
-    {
-        if (listenersBound)
-            return;
-
-        if (newGameButton != null)
-            newGameButton.onClick.AddListener(NewGame);
-
-        if (loadGameButton != null)
-            loadGameButton.onClick.AddListener(LoadGame);
-
-        if (settingsButton != null)
-            settingsButton.onClick.AddListener(ShowSettings);
-
-        if (quitButton != null)
-            quitButton.onClick.AddListener(QuitGame);
-
-        listenersBound = true;
-    }
-
     void CheckSaveFile()
     {
-        if (loadGameButton == null)
-            return;
-
         if (PlayerPrefs.HasKey("SavedScene"))
         {
-            loadGameButton.interactable = true;
-            string savedLevel = PlayerPrefs.GetString("SavedLevelName", "Unknown Level");
+            if (loadGameButton != null)
+                loadGameButton.interactable = true;
 
+            string savedLevel = PlayerPrefs.GetString("SavedLevelName", "Unknown Level");
             if (loadGameText != null)
                 loadGameText.text = "Continue: " + savedLevel;
         }
         else
         {
-            loadGameButton.interactable = false;
+            if (loadGameButton != null)
+                loadGameButton.interactable = false;
 
             if (loadGameText != null)
                 loadGameText.text = "No Save Found";
@@ -106,10 +88,13 @@ public class MainMenu : MonoBehaviour
 
     public void NewGame()
     {
-        PlayerPrefs.DeleteKey("SavedScene");
-        PlayerPrefs.DeleteKey("SavedLevelName");
-        PlayerPrefs.DeleteKey("SavedScore");
-        PlayerPrefs.Save();
+        if (SaveSystem.Instance != null)
+            SaveSystem.Instance.DeleteSave();
+        else
+            PlayerPrefs.DeleteKey("SavedScene");
+
+        if (HUDManager.Instance != null)
+            HUDManager.Instance.ShowHUD(true);
 
         SceneManager.LoadScene("Level01_Entrance");
     }
@@ -119,18 +104,34 @@ public class MainMenu : MonoBehaviour
         if (!PlayerPrefs.HasKey("SavedScene"))
             return;
 
-        string sceneToLoad = PlayerPrefs.GetString("SavedScene");
-        SceneManager.LoadScene(sceneToLoad);
+        PlayerHealth.ShouldRestorePosition = true;
+
+        if (HUDManager.Instance != null)
+            HUDManager.Instance.ShowHUD(true);
+
+        SceneManager.LoadScene(PlayerPrefs.GetString("SavedScene"));
     }
 
-    public void ShowSettings()
+    public void OpenSettings()
     {
+        if (SettingsMenu.Instance != null)
+        {
+            SettingsMenu.Instance.Open();
+            return;
+        }
+
         if (settingsPanel != null)
             settingsPanel.SetActive(true);
     }
 
     public void HideSettings()
     {
+        if (SettingsMenu.Instance != null)
+        {
+            SettingsMenu.Instance.Close();
+            return;
+        }
+
         if (settingsPanel != null)
             settingsPanel.SetActive(false);
     }
@@ -139,5 +140,14 @@ public class MainMenu : MonoBehaviour
     {
         Debug.Log("Game Quit");
         Application.Quit();
+    }
+
+    void AddButtonListener(Button button, UnityEngine.Events.UnityAction action)
+    {
+        if (button == null)
+            return;
+
+        TempleAudio.RegisterButton(button);
+        button.onClick.AddListener(action);
     }
 }
