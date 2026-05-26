@@ -57,8 +57,14 @@ public class PlayerHealth : MonoBehaviour
         AN_HeroInteractive hero = GetComponent<AN_HeroInteractive>();
         if (hero != null)
         {
-            hero.RedKey = PlayerPrefs.GetInt("SavedRedKey", 0) == 1;
-            hero.BlueKey = PlayerPrefs.GetInt("SavedBlueKey", 0) == 1;
+            int redKeyCount = PlayerPrefs.HasKey("SavedRedKeyCount")
+                ? PlayerPrefs.GetInt("SavedRedKeyCount", 0)
+                : PlayerPrefs.GetInt("SavedRedKey", 0);
+            int blueKeyCount = PlayerPrefs.HasKey("SavedBlueKeyCount")
+                ? PlayerPrefs.GetInt("SavedBlueKeyCount", 0)
+                : PlayerPrefs.GetInt("SavedBlueKey", 0);
+
+            hero.SetKeyCounts(redKeyCount, blueKeyCount);
         }
     }
 

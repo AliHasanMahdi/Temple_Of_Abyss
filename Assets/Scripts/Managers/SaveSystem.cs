@@ -92,9 +92,14 @@ public class SaveSystem : MonoBehaviour
             if (hero == null) hero = player.GetComponentInChildren<AN_HeroInteractive>();
             if (hero != null)
             {
-                PlayerPrefs.SetInt("SavedRedKey", hero.RedKey ? 1 : 0);
-                PlayerPrefs.SetInt("SavedBlueKey", hero.BlueKey ? 1 : 0);
-                Debug.Log("[SaveSystem] Keys saved at checkpoint — Red: " + hero.RedKey + "  Blue: " + hero.BlueKey);
+                int redKeyCount = Mathf.Max(hero.RedKeyCount, hero.RedKey ? 1 : 0);
+                int blueKeyCount = Mathf.Max(hero.BlueKeyCount, hero.BlueKey ? 1 : 0);
+
+                PlayerPrefs.SetInt("SavedRedKeyCount", redKeyCount);
+                PlayerPrefs.SetInt("SavedBlueKeyCount", blueKeyCount);
+                PlayerPrefs.SetInt("SavedRedKey", redKeyCount > 0 ? 1 : 0);
+                PlayerPrefs.SetInt("SavedBlueKey", blueKeyCount > 0 ? 1 : 0);
+                Debug.Log("[SaveSystem] Keys saved at checkpoint — Red: " + redKeyCount + "  Blue: " + blueKeyCount);
             }
         }
 
@@ -137,9 +142,15 @@ public class SaveSystem : MonoBehaviour
         if (hero == null) hero = player.GetComponentInChildren<AN_HeroInteractive>();
         if (hero != null)
         {
-            hero.RedKey = PlayerPrefs.GetInt("SavedRedKey", 0) == 1;
-            hero.BlueKey = PlayerPrefs.GetInt("SavedBlueKey", 0) == 1;
-            Debug.Log("[SaveSystem] Restored keys — Red: " + hero.RedKey + "  Blue: " + hero.BlueKey);
+            int redKeyCount = PlayerPrefs.HasKey("SavedRedKeyCount")
+                ? PlayerPrefs.GetInt("SavedRedKeyCount", 0)
+                : PlayerPrefs.GetInt("SavedRedKey", 0);
+            int blueKeyCount = PlayerPrefs.HasKey("SavedBlueKeyCount")
+                ? PlayerPrefs.GetInt("SavedBlueKeyCount", 0)
+                : PlayerPrefs.GetInt("SavedBlueKey", 0);
+
+            hero.SetKeyCounts(redKeyCount, blueKeyCount);
+            Debug.Log("[SaveSystem] Restored keys — Red: " + redKeyCount + "  Blue: " + blueKeyCount);
         }
 
         // Clear session memory — pending state is intentionally lost on death
@@ -210,6 +221,8 @@ public class SaveSystem : MonoBehaviour
         PlayerPrefs.DeleteKey("SavedPosZ");
         PlayerPrefs.DeleteKey("SavedRedKey");
         PlayerPrefs.DeleteKey("SavedBlueKey");
+        PlayerPrefs.DeleteKey("SavedRedKeyCount");
+        PlayerPrefs.DeleteKey("SavedBlueKeyCount");
 
         PlayerPrefs.DeleteKey("KeyPickedUp_Key_01");
         PlayerPrefs.DeleteKey("KeyPickedUp_Key_02");
@@ -217,6 +230,7 @@ public class SaveSystem : MonoBehaviour
         PlayerPrefs.DeleteKey("Door_Door_02");
         PlayerPrefs.DeleteKey("Door_Door_03");
         PlayerPrefs.DeleteKey("CoinsCollected");
+        PersistentInventory.ClearAll();
         PlayerPrefs.Save();
 
         _pendingUnlockedDoors.Clear();

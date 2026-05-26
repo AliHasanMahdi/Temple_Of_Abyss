@@ -50,14 +50,21 @@ public class AN_DoorKey : MonoBehaviour
 
     void PickUp()
     {
+        if (hero == null)
+            return;
+
+        bool isRedKey = keyType == KeyType.Red;
+        hero.AddKey(isRedKey);
+
+        if (InventoryManager.Instance != null)
+            InventoryManager.Instance.AddKey(isRedKey);
+
         switch (keyType)
         {
             case KeyType.Red:
-                hero.RedKey = true;
                 Debug.Log("[AN_DoorKey] Red Key picked up!");
                 break;
             case KeyType.Blue:
-                hero.BlueKey = true;
                 Debug.Log("[AN_DoorKey] Blue Key picked up!");
                 break;
         }
@@ -66,10 +73,10 @@ public class AN_DoorKey : MonoBehaviour
         // If the player dies before that, the scene reloads, pending memory is gone,
         // and this key will respawn correctly.
         if (SaveSystem.Instance != null)
-            SaveSystem.Instance.PendingKeyPickup(keyID, keyType == KeyType.Red);
+            SaveSystem.Instance.PendingKeyPickup(keyID, isRedKey);
 
         if (HUDManager.Instance != null)
-            HUDManager.Instance.ShowKeyMessage(keyType == KeyType.Red);
+            HUDManager.Instance.ShowKeyMessage(isRedKey);
 
         Destroy(gameObject);
     }
