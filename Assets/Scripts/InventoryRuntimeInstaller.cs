@@ -33,7 +33,7 @@ public static class InventoryRuntimeInstaller
 
     private static void InstallInventory()
     {
-        InventoryManager existingManager = Object.FindObjectOfType<InventoryManager>();
+        InventoryManager existingManager = Object.FindAnyObjectByType<InventoryManager>();
         if (ShouldSkipInventory(SceneManager.GetActiveScene().name))
         {
             RemoveInventory(existingManager);
@@ -174,7 +174,7 @@ public static class InventoryRuntimeInstaller
 
     private static void EnsureEventSystem()
     {
-        if (Object.FindObjectOfType<EventSystem>() != null)
+        if (Object.FindAnyObjectByType<EventSystem>() != null)
         {
             return;
         }
@@ -316,7 +316,7 @@ public static class InventoryRuntimeInstaller
         text.fontSize = size;
         text.alignment = alignment;
         text.color = Color.white;
-        text.enableWordWrapping = false;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
         text.raycastTarget = false;
         text.outlineWidth = 0.18f;
         text.outlineColor = Color.black;

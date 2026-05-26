@@ -9,6 +9,7 @@ public class PlayerInteraction : MonoBehaviour
     private PlayerMovement playerMovement;
     private PlayerHealth playerHealth;
     private PauseMenu pauseMenu;
+    private InventoryManager inventoryManager;
 
     void Awake()
     {
@@ -25,8 +26,11 @@ public class PlayerInteraction : MonoBehaviour
     void Update()
     {
         pauseMenu ??= FindFirstObjectByType<PauseMenu>();
+        inventoryManager ??= FindFirstObjectByType<InventoryManager>();
 
-        if (pauseMenu != null && pauseMenu.IsPaused)
+        if ((pauseMenu != null && pauseMenu.IsPaused) ||
+            (inventoryManager != null && inventoryManager.IsOpen) ||
+            Time.timeScale == 0f)
         {
             HidePrompt();
             return;
@@ -44,7 +48,7 @@ public class PlayerInteraction : MonoBehaviour
             return;
         }
 
-        Interactable interactable = FindInteractable();
+        IPlayerInteractable interactable = FindInteractable();
         if (interactable == null || !interactable.CanInteract(gameObject))
         {
             HidePrompt();
@@ -58,13 +62,34 @@ public class PlayerInteraction : MonoBehaviour
             interactable.Interact(gameObject);
     }
 
-    Interactable FindInteractable()
+    IPlayerInteractable FindInteractable()
     {
         Ray ray = new Ray(playerMovement.ViewTransform.position, playerMovement.ViewTransform.forward);
         if (!Physics.Raycast(ray, out RaycastHit hit, interactionRange, interactionMask, QueryTriggerInteraction.Collide))
             return null;
 
-        return hit.collider.GetComponentInParent<Interactable>();
+        return FindInteractableComponent(hit.collider);
+    }
+
+    IPlayerInteractable FindInteractableComponent(Collider hitCollider)
+    {
+        Transform current = hitCollider != null ? hitCollider.transform : null;
+        while (current != null)
+        {
+            MonoBehaviour[] components = current.GetComponents<MonoBehaviour>();
+            foreach (MonoBehaviour component in components)
+            {
+                if (component is Behaviour behaviour && !behaviour.enabled)
+                    continue;
+
+                if (component is IPlayerInteractable interactable)
+                    return interactable;
+            }
+
+            current = current.parent;
+        }
+
+        return null;
     }
 
     void HidePrompt()

@@ -61,7 +61,7 @@ public class Box : MonoBehaviour
         if (hasKey)
         {
             // Add key to hero
-            AN_HeroInteractive hero = FindObjectOfType<AN_HeroInteractive>();
+            AN_HeroInteractive hero = Object.FindAnyObjectByType<AN_HeroInteractive>();
             if (hero != null) hero.AddKey(true); // true = red key
 
             // Show in inventory

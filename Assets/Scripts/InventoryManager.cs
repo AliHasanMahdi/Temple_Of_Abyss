@@ -13,6 +13,7 @@ public class InventoryManager : MonoBehaviour
     public GridGenerator gridGen;
     public KeyCode legacyToggleKey = KeyCode.I;
     public bool pauseGameWhenOpen = true;
+    public bool IsOpen => isOpen;
 
     private bool isOpen;
     private CursorLockMode previousLockState;
@@ -147,7 +148,7 @@ public class InventoryManager : MonoBehaviour
 
     private void SyncKeysFromHero()
     {
-        AN_HeroInteractive hero = FindObjectOfType<AN_HeroInteractive>();
+        AN_HeroInteractive hero = Object.FindAnyObjectByType<AN_HeroInteractive>();
         if (hero == null)
         {
             return;

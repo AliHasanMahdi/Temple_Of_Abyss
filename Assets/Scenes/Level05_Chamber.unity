@@ -60535,10 +60535,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e0b455084a30ac4794480f962b4ed5f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HUDManager
+  hpFill: {fileID: 0}
   healthBar: {fileID: 1119396953}
+  scoreImage: {fileID: 0}
   scoreText: {fileID: 1023843105}
   checkpointText: {fileID: 0}
+  messageBackground: {fileID: 0}
   interactPromptText: {fileID: 1530338750}
+  interactBackground: {fileID: 0}
 --- !u!4 &1872865783
 Transform:
   m_ObjectHideFlags: 0

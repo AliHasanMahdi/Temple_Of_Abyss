@@ -1,9 +1,6 @@
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
-public class Level05PuzzlePedestal : MonoBehaviour
+public class Level05PuzzlePedestal : MonoBehaviour, IPlayerInteractable
 {
     public string rewardItemId;
     public string puzzleName = "Puzzle";
@@ -11,7 +8,6 @@ public class Level05PuzzlePedestal : MonoBehaviour
     public Color rewardColor = Color.white;
     public float interactDistance = 3.5f;
 
-    private Transform player;
     private bool solved;
 
     private void Start()
@@ -20,33 +16,19 @@ public class Level05PuzzlePedestal : MonoBehaviour
         ApplyColor();
     }
 
-    private void Update()
+    public bool CanInteract(GameObject interactor)
     {
-        if (solved)
-        {
-            return;
-        }
+        return enabled && gameObject.activeInHierarchy && !solved && IsWithinRange(interactor);
+    }
 
-        EnsurePlayer();
-        if (player == null)
-        {
-            return;
-        }
+    public string GetPromptText()
+    {
+        return "Press E to solve " + puzzleName;
+    }
 
-        bool near = Vector3.Distance(transform.position, player.position) <= interactDistance;
-        if (near && HUDManager.Instance != null)
-        {
-            HUDManager.Instance.ShowInteractPrompt("Press E to solve " + puzzleName);
-        }
-
-        if (near && WasInteractPressed())
-        {
-            Solve();
-        }
-        else if (!near && HUDManager.Instance != null)
-        {
-            HUDManager.Instance.HideInteractPrompt();
-        }
+    public void Interact(GameObject interactor)
+    {
+        Solve();
     }
 
     private void Solve()
@@ -55,52 +37,29 @@ public class Level05PuzzlePedestal : MonoBehaviour
         PersistentInventory.Collect(rewardItemId);
 
         if (InventoryManager.Instance != null)
-        {
             InventoryManager.Instance.RefreshInventory();
-        }
 
         if (HUDManager.Instance != null)
-        {
-            HUDManager.Instance.ShowInteractPrompt(rewardName + " obtained");
-        }
+            HUDManager.Instance.ShowTimedMessage(rewardName + " obtained", 2f);
     }
 
     private void ApplyColor()
     {
         Renderer renderer = GetComponentInChildren<Renderer>();
         if (renderer != null)
-        {
             renderer.material.color = rewardColor;
-        }
     }
 
-    private void EnsurePlayer()
+    private bool IsWithinRange(GameObject interactor)
     {
-        if (player != null)
-        {
-            return;
-        }
+        if (interactor == null)
+            return false;
 
-        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
-        if (playerObject != null)
-        {
-            player = playerObject.transform;
-        }
-    }
+        Transform origin = interactor.transform;
+        PlayerMovement movement = interactor.GetComponent<PlayerMovement>();
+        if (movement != null && movement.ViewTransform != null)
+            origin = movement.ViewTransform;
 
-    private bool WasInteractPressed()
-    {
-#if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
-        {
-            return true;
-        }
-#endif
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-        return Input.GetKeyDown(KeyCode.E);
-#else
-        return false;
-#endif
+        return Vector3.Distance(transform.position, origin.position) <= interactDistance;
     }
 }

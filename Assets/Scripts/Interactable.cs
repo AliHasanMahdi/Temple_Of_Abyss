@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public abstract class Interactable : MonoBehaviour
+public abstract class Interactable : MonoBehaviour, IPlayerInteractable
 {
     [Header("Interaction")]
     public string displayName = "object";

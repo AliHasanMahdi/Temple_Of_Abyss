@@ -66,6 +66,7 @@ public class PlayerMovement : MonoBehaviour
     bool isRunning;
     float footstepTimer;
     bool hasMovementInput;
+    PlayerPowerUps powerUps;
 
     public bool IsGrounded => isGrounded;
     public bool IsMoving => moveInputMagnitude > 0.1f;
@@ -80,10 +81,12 @@ public class PlayerMovement : MonoBehaviour
 
         controller = GetComponent<CharacterController>();
         pauseMenu = FindFirstObjectByType<PauseMenu>();
+        powerUps = GetComponent<PlayerPowerUps>();
 
         EnsureFirstPersonCamera();
         EnsureBodyVisual();
         EnsureSupportComponents();
+        powerUps = GetComponent<PlayerPowerUps>();
         PromotePlayerCamera();
 
         originalHeight = Mathf.Max(controller.height, 2f);
@@ -130,6 +133,7 @@ public class PlayerMovement : MonoBehaviour
     void OnEnable()
     {
         controller = GetComponent<CharacterController>();
+        powerUps = GetComponent<PlayerPowerUps>();
     }
 
     void Update()
@@ -210,6 +214,9 @@ public class PlayerMovement : MonoBehaviour
 
         if (GetComponent<PlayerVisualAnimator>() == null)
             gameObject.AddComponent<PlayerVisualAnimator>();
+
+        if (GetComponent<PlayerPowerUps>() == null)
+            gameObject.AddComponent<PlayerPowerUps>();
     }
 
     void PromotePlayerCamera()
@@ -260,6 +267,7 @@ public class PlayerMovement : MonoBehaviour
         hasMovementInput = moveInput.sqrMagnitude > 0.01f;
         bool isSprinting = IsSprintPressed() && hasMovementInput && !isCrouching;
         float speed = isCrouching ? walkSpeed * 0.5f : isSprinting ? runSpeed : walkSpeed;
+        speed *= powerUps != null ? powerUps.CurrentSpeedMultiplier : 1f;
 
         Vector3 move = (transform.right * moveX + transform.forward * moveZ).normalized;
         moveInputMagnitude = move.magnitude;
@@ -361,10 +369,16 @@ public class PlayerMovement : MonoBehaviour
         else
             jumpBufferTimer -= Time.deltaTime;
 
-        if (jumpBufferTimer > 0f && coyoteTimer > 0f && !isCrouching)
+        if (jumpBufferTimer > 0f && !isCrouching)
         {
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            jumpBufferTimer = 0f;
+            if (coyoteTimer > 0f)
+            {
+                ApplyJumpForce();
+            }
+            else if (powerUps != null && powerUps.TryConsumeDoubleJump())
+            {
+                ApplyJumpForce();
+            }
         }
 
         if (velocity.y < 0f)
@@ -378,6 +392,12 @@ public class PlayerMovement : MonoBehaviour
 
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+    }
+
+    void ApplyJumpForce()
+    {
+        velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+        jumpBufferTimer = 0f;
     }
 
     bool IsTouchingGround()

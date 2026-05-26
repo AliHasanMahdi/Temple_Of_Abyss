@@ -351,7 +351,7 @@ public class EnemyAI : MonoBehaviour
 
         PlayerHealth health = player.GetComponent<PlayerHealth>();
         if (health == null) health = player.GetComponentInParent<PlayerHealth>();
-        if (health == null) health = FindObjectOfType<PlayerHealth>();
+        if (health == null) health = Object.FindAnyObjectByType<PlayerHealth>();
 
         if (health != null)
             health.TakeDamage(damage);

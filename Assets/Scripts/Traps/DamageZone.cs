@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class SpikeDamage : MonoBehaviour
+public class DamageZone : MonoBehaviour
 {
     public float damage = 50f;
 

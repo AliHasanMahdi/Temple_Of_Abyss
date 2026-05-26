@@ -50,8 +50,6 @@ public class GridGenerator : MonoBehaviour
         BoxCollider collider = cell.GetComponent<BoxCollider>();
         collider.isTrigger = true;
 
-        cell.AddComponent<CellTrigger>();
-
         MeshRenderer renderer = cell.GetComponent<MeshRenderer>();
         Shader shader = Shader.Find("Universal Render Pipeline/Lit");
         if (shader == null)

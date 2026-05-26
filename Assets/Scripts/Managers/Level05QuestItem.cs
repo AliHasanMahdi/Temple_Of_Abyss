@@ -1,9 +1,6 @@
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
-public class Level05QuestItem : MonoBehaviour
+public class Level05QuestItem : MonoBehaviour, IPlayerInteractable
 {
     public string itemId;
     public string displayName = "Item";
@@ -11,7 +8,6 @@ public class Level05QuestItem : MonoBehaviour
     public float collectDistance = 3f;
     public bool finishGameOnCollect = false;
 
-    private Transform player;
     private bool collected;
 
     private void Start()
@@ -25,57 +21,42 @@ public class Level05QuestItem : MonoBehaviour
         ApplyColor();
     }
 
-    private void Update()
+    public bool CanInteract(GameObject interactor)
     {
-        if (collected)
-        {
-            return;
-        }
+        return enabled &&
+               gameObject.activeInHierarchy &&
+               !collected &&
+               !string.IsNullOrEmpty(itemId) &&
+               IsWithinRange(interactor);
+    }
 
-        EnsurePlayer();
-        if (player == null)
-        {
-            return;
-        }
+    public string GetPromptText()
+    {
+        return "Press E to collect " + displayName;
+    }
 
-        bool near = Vector3.Distance(transform.position, player.position) <= collectDistance;
-        if (near && HUDManager.Instance != null)
-        {
-            HUDManager.Instance.ShowInteractPrompt("Press E to collect " + displayName);
-        }
-
-        if (near && WasInteractPressed())
-        {
-            Collect();
-        }
-        else if (!near && HUDManager.Instance != null)
-        {
-            HUDManager.Instance.HideInteractPrompt();
-        }
+    public void Interact(GameObject interactor)
+    {
+        Collect();
     }
 
     private void Collect()
     {
         if (string.IsNullOrEmpty(itemId))
-        {
             return;
-        }
 
         collected = true;
         PersistentInventory.Collect(itemId);
 
         if (InventoryManager.Instance != null)
-        {
             InventoryManager.Instance.RefreshInventory();
-        }
 
         if (HUDManager.Instance != null)
-        {
-            HUDManager.Instance.ShowInteractPrompt(displayName + " collected");
-        }
+            HUDManager.Instance.ShowTimedMessage(displayName + " collected", 2f);
 
         if (finishGameOnCollect)
         {
+            GameOverMenu.ShowFinish();
             UnityEngine.SceneManagement.SceneManager.LoadScene("GameOver");
             return;
         }
@@ -87,44 +68,23 @@ public class Level05QuestItem : MonoBehaviour
     {
         Renderer renderer = GetComponentInChildren<Renderer>();
         if (renderer != null)
-        {
             renderer.material.color = itemColor;
-        }
 
         Light light = GetComponentInChildren<Light>();
         if (light != null)
-        {
             light.color = itemColor;
-        }
     }
 
-    private void EnsurePlayer()
+    private bool IsWithinRange(GameObject interactor)
     {
-        if (player != null)
-        {
-            return;
-        }
+        if (interactor == null)
+            return false;
 
-        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
-        if (playerObject != null)
-        {
-            player = playerObject.transform;
-        }
-    }
+        Transform origin = interactor.transform;
+        PlayerMovement movement = interactor.GetComponent<PlayerMovement>();
+        if (movement != null && movement.ViewTransform != null)
+            origin = movement.ViewTransform;
 
-    private bool WasInteractPressed()
-    {
-#if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
-        {
-            return true;
-        }
-#endif
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-        return Input.GetKeyDown(KeyCode.E);
-#else
-        return false;
-#endif
+        return Vector3.Distance(transform.position, origin.position) <= collectDistance;
     }
 }

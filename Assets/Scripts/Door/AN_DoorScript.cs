@@ -1,7 +1,6 @@
-﻿using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine;
 
-public class AN_DoorScript : MonoBehaviour
+public class AN_DoorScript : MonoBehaviour, IPlayerInteractable
 {
     [Header("Door Settings")]
     public bool Locked = false;
@@ -21,7 +20,6 @@ public class AN_DoorScript : MonoBehaviour
     [Range(0f, 4f)]
     public float OpenSpeed = 3f;
 
-    // ── DOOR SOUNDS ───────────────────────────────────────────────
     [Header("Door Sounds")]
     [Tooltip("AudioSource on this door GameObject (3D)")]
     public AudioSource doorAudioSource;
@@ -40,23 +38,24 @@ public class AN_DoorScript : MonoBehaviour
 
     [Range(0f, 1f)]
     public float doorVolume = 0.8f;
-    // ─────────────────────────────────────────────────────────────
+
+    [Header("Interaction")]
+    public float interactionDistance = 3f;
+
+    public bool RequiresKey => RedLocked || BlueLocked;
 
     private AN_HeroInteractive HeroInteractive;
     private Rigidbody rbDoor;
     private HingeJoint hinge;
     private JointLimits hingeLim;
     private float currentLim;
-    private Camera mainCam;
 
     void Start()
     {
         rbDoor = GetComponent<Rigidbody>();
         hinge = GetComponent<HingeJoint>();
-        mainCam = Camera.main;
         HeroInteractive = Object.FindAnyObjectByType<AN_HeroInteractive>();
 
-        // Auto-create 3D AudioSource if not assigned
         if (doorAudioSource == null)
         {
             doorAudioSource = gameObject.AddComponent<AudioSource>();
@@ -72,8 +71,8 @@ public class AN_DoorScript : MonoBehaviour
         }
 
         LoadDefaultSounds();
+        NormalizeLockState();
 
-        // Restore unlocked state — checks both disk (past checkpoint) and session memory
         if (SaveSystem.Instance != null && SaveSystem.Instance.IsDoorUnlocked(doorID))
         {
             Locked = false;
@@ -83,53 +82,70 @@ public class AN_DoorScript : MonoBehaviour
             isOpened = true;
             currentLim = 85f;
         }
+
+        NormalizeLockState();
     }
 
-    void Update()
+    public bool CanInteract(GameObject interactor)
     {
-        if (!Remote && Keyboard.current != null &&
-            Keyboard.current.eKey.wasPressedThisFrame && NearView())
-        {
-            Action();
-        }
+        return !Remote && enabled && gameObject.activeInHierarchy && IsWithinRange(interactor);
+    }
+
+    public string GetPromptText()
+    {
+        if (Locked && !RequiresKey)
+            return "Door is locked";
+
+        if (RequiresKey)
+            return "Press E to unlock door";
+
+        return "Press E to " + (isOpened ? "close door" : "open door");
+    }
+
+    public void Interact(GameObject interactor)
+    {
+        if (interactor != null)
+            HeroInteractive = interactor.GetComponent<AN_HeroInteractive>() ?? interactor.GetComponentInChildren<AN_HeroInteractive>();
+
+        Action();
     }
 
     public void Action()
     {
-        // Hard locked — play locked sound and stop
-        if (Locked || !CanOpen)
+        NormalizeLockState();
+        bool needsKey = RequiresKey;
+
+        if (Locked && !needsKey)
         {
             PlayDoorSoundAudible(lockedSound);
             return;
         }
 
-        // Try to unlock with keys
         if (HeroInteractive != null)
         {
-            if (RedLocked && HeroInteractive.RedKey)
+            if (RedLocked && HeroInteractive.UseKey(true))
             {
                 RedLocked = false;
-                HeroInteractive.RedKey = false;
+                Locked = false;
                 PlayDoorSoundAudible(unlockSound);
+                InventoryManager.Instance?.SyncKeysFromPlayer();
 
-                // Store in memory only — written to disk when player hits a checkpoint
                 if (SaveSystem.Instance != null)
                     SaveSystem.Instance.PendingDoorUnlocked(doorID);
             }
-            else if (BlueLocked && HeroInteractive.BlueKey)
+            else if (BlueLocked && HeroInteractive.UseKey(false))
             {
                 BlueLocked = false;
-                HeroInteractive.BlueKey = false;
+                Locked = false;
                 PlayDoorSoundAudible(unlockSound);
+                InventoryManager.Instance?.SyncKeysFromPlayer();
 
-                // Store in memory only — written to disk when player hits a checkpoint
                 if (SaveSystem.Instance != null)
                     SaveSystem.Instance.PendingDoorUnlocked(doorID);
             }
         }
 
-        // Still locked by key — play locked sound
-        if (RedLocked || BlueLocked)
+        if (RequiresKey)
         {
             PlayDoorSoundAudible(lockedSound);
 
@@ -138,13 +154,22 @@ public class AN_DoorScript : MonoBehaviour
             return;
         }
 
-        // Open or close
+        NormalizeLockState();
+
         if (isOpened && CanClose)
         {
             isOpened = false;
             PlayDoorSound(closeSound);
+            return;
         }
-        else if (!isOpened)
+
+        if (!CanOpen)
+        {
+            PlayDoorSoundAudible(lockedSound);
+            return;
+        }
+
+        if (!isOpened)
         {
             isOpened = true;
             PlayDoorSound(openSound);
@@ -154,7 +179,11 @@ public class AN_DoorScript : MonoBehaviour
         }
     }
 
-    // ── DOOR SOUND HELPERS ────────────────────────────────────────
+    void NormalizeLockState()
+    {
+        Locked = RequiresKey;
+    }
+
     AudioClip PlayDoorSound(AudioClip clip)
     {
         if (clip == null)
@@ -162,7 +191,10 @@ public class AN_DoorScript : MonoBehaviour
             LoadDefaultSounds();
             clip = openSound;
         }
-        if (doorAudioSource == null || clip == null) return clip;
+
+        if (doorAudioSource == null || clip == null)
+            return clip;
+
         doorAudioSource.pitch = Random.Range(0.95f, 1.05f);
         doorAudioSource.PlayOneShot(clip, doorVolume);
         return clip;
@@ -191,17 +223,24 @@ public class AN_DoorScript : MonoBehaviour
         if (unlockSound == null)
             unlockSound = TempleAudio.LoadClip("TempleAudio/SFX/Unlock 1");
     }
-    // ─────────────────────────────────────────────────────────────
 
-    bool NearView()
+    bool IsWithinRange(GameObject interactor)
     {
-        if (mainCam == null) return false;
-        return Vector3.Distance(transform.position, mainCam.transform.position) < 3f;
+        if (interactor == null)
+            return false;
+
+        Transform origin = interactor.transform;
+        PlayerMovement movement = interactor.GetComponent<PlayerMovement>();
+        if (movement != null && movement.ViewTransform != null)
+            origin = movement.ViewTransform;
+
+        return Vector3.Distance(transform.position, origin.position) < interactionDistance;
     }
 
     void FixedUpdate()
     {
-        if (hinge == null) return;
+        if (hinge == null)
+            return;
 
         currentLim = isOpened
             ? 85f

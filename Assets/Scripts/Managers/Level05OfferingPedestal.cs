@@ -1,9 +1,6 @@
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
-public class Level05OfferingPedestal : MonoBehaviour
+public class Level05OfferingPedestal : MonoBehaviour, IPlayerInteractable
 {
     public string requiredGemId;
     public string placedId;
@@ -11,7 +8,6 @@ public class Level05OfferingPedestal : MonoBehaviour
     public Color placedColor = Color.white;
     public float interactDistance = 3.5f;
 
-    private Transform player;
     private bool placed;
 
     private void Start()
@@ -20,33 +16,19 @@ public class Level05OfferingPedestal : MonoBehaviour
         ApplyVisual();
     }
 
-    private void Update()
+    public bool CanInteract(GameObject interactor)
     {
-        if (placed)
-        {
-            return;
-        }
+        return enabled && gameObject.activeInHierarchy && !placed && IsWithinRange(interactor);
+    }
 
-        EnsurePlayer();
-        if (player == null)
-        {
-            return;
-        }
+    public string GetPromptText()
+    {
+        return "Press E to place " + displayName;
+    }
 
-        bool near = Vector3.Distance(transform.position, player.position) <= interactDistance;
-        if (near && HUDManager.Instance != null)
-        {
-            HUDManager.Instance.ShowInteractPrompt("Press E to place " + displayName);
-        }
-
-        if (near && WasInteractPressed())
-        {
-            TryPlace();
-        }
-        else if (!near && HUDManager.Instance != null)
-        {
-            HUDManager.Instance.HideInteractPrompt();
-        }
+    public void Interact(GameObject interactor)
+    {
+        TryPlace();
     }
 
     private void TryPlace()
@@ -54,9 +36,7 @@ public class Level05OfferingPedestal : MonoBehaviour
         if (!PersistentInventory.Consume(requiredGemId))
         {
             if (HUDManager.Instance != null)
-            {
-                HUDManager.Instance.ShowInteractPrompt("You need the " + displayName);
-            }
+                HUDManager.Instance.ShowTimedMessage("You need the " + displayName, 2f);
 
             return;
         }
@@ -66,59 +46,39 @@ public class Level05OfferingPedestal : MonoBehaviour
         ApplyVisual();
 
         if (InventoryManager.Instance != null)
-        {
             InventoryManager.Instance.RefreshInventory();
-        }
 
         if (PersistentInventory.AllOfferingsPlaced())
         {
-            Level05ChamberDoor[] doors = Object.FindObjectsOfType<Level05ChamberDoor>();
+            Level05ChamberDoor[] doors = Object.FindObjectsByType<Level05ChamberDoor>(FindObjectsSortMode.None);
             foreach (Level05ChamberDoor door in doors)
             {
                 if (door != null && door.treasureDoor)
-                {
                     door.Open();
-                }
             }
         }
+
+        if (HUDManager.Instance != null)
+            HUDManager.Instance.ShowTimedMessage(displayName + " placed", 2f);
     }
 
     private void ApplyVisual()
     {
         Renderer renderer = GetComponentInChildren<Renderer>();
         if (renderer != null)
-        {
             renderer.material.color = placed ? placedColor : Color.gray;
-        }
     }
 
-    private void EnsurePlayer()
+    private bool IsWithinRange(GameObject interactor)
     {
-        if (player != null)
-        {
-            return;
-        }
+        if (interactor == null)
+            return false;
 
-        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
-        if (playerObject != null)
-        {
-            player = playerObject.transform;
-        }
-    }
+        Transform origin = interactor.transform;
+        PlayerMovement movement = interactor.GetComponent<PlayerMovement>();
+        if (movement != null && movement.ViewTransform != null)
+            origin = movement.ViewTransform;
 
-    private bool WasInteractPressed()
-    {
-#if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
-        {
-            return true;
-        }
-#endif
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-        return Input.GetKeyDown(KeyCode.E);
-#else
-        return false;
-#endif
+        return Vector3.Distance(transform.position, origin.position) <= interactDistance;
     }
 }

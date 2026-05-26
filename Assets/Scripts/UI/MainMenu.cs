@@ -32,6 +32,7 @@ public class MainMenu : MonoBehaviour
             settingsPanel.SetActive(false);
 
         CheckSaveFile();
+        FixMenuGraphics();
 
         AddButtonListener(newGameButton, NewGame);
         AddButtonListener(loadGameButton, LoadGame);
@@ -149,5 +150,52 @@ public class MainMenu : MonoBehaviour
 
         TempleAudio.RegisterButton(button);
         button.onClick.AddListener(action);
+    }
+
+    void FixMenuGraphics()
+    {
+        NormalizeButtonImage(newGameButton);
+        NormalizeButtonImage(loadGameButton);
+        NormalizeButtonImage(settingsButton);
+        NormalizeButtonImage(quitButton);
+
+        ApplyDecorativeFallback("Panel");
+        ApplyDecorativeFallback("PauseMenuPanel");
+        ApplyDecorativeFallback("SettingsPanel");
+    }
+
+    void NormalizeButtonImage(Button button)
+    {
+        Image image = button != null ? button.targetGraphic as Image : null;
+        if (image == null || image.sprite != null)
+            return;
+
+        image.color = new Color(0.23f, 0.16f, 0.1f, 0.92f);
+        image.type = Image.Type.Simple;
+    }
+
+    void ApplyDecorativeFallback(string rootName)
+    {
+        GameObject root = rootName == "SettingsPanel" ? settingsPanel : GameObject.Find(rootName);
+        if (root == null)
+            return;
+
+        foreach (Image image in root.GetComponentsInChildren<Image>(true))
+        {
+            if (image == null || image.gameObject.name != "Image")
+                continue;
+
+            RectTransform rect = image.rectTransform;
+            if (rect == null)
+                continue;
+
+            if (rect.sizeDelta.x < 150f || rect.sizeDelta.y < 150f)
+                continue;
+
+            image.sprite = null;
+            image.type = Image.Type.Simple;
+            image.color = new Color(0.11f, 0.09f, 0.07f, 0.88f);
+            image.raycastTarget = false;
+        }
     }
 }

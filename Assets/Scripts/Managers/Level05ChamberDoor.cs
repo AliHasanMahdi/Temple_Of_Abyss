@@ -1,9 +1,6 @@
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
-public class Level05ChamberDoor : MonoBehaviour
+public class Level05ChamberDoor : MonoBehaviour, IPlayerInteractable
 {
     public string requiredItemId;
     public string doorName = "Door";
@@ -11,7 +8,6 @@ public class Level05ChamberDoor : MonoBehaviour
     public GameObject treasureObject;
     public float interactDistance = 4f;
 
-    private Transform player;
     private bool opened;
 
     private void Start()
@@ -29,33 +25,19 @@ public class Level05ChamberDoor : MonoBehaviour
         }
     }
 
-    private void Update()
+    public bool CanInteract(GameObject interactor)
     {
-        if (opened || treasureDoor)
-        {
-            return;
-        }
+        return enabled && gameObject.activeInHierarchy && !opened && !treasureDoor && IsWithinRange(interactor);
+    }
 
-        EnsurePlayer();
-        if (player == null)
-        {
-            return;
-        }
+    public string GetPromptText()
+    {
+        return "Press E to unlock " + doorName;
+    }
 
-        bool near = Vector3.Distance(transform.position, player.position) <= interactDistance;
-        if (near && HUDManager.Instance != null)
-        {
-            HUDManager.Instance.ShowInteractPrompt("Press E to unlock " + doorName);
-        }
-
-        if (near && WasInteractPressed())
-        {
-            TryOpenWithKey();
-        }
-        else if (!near && HUDManager.Instance != null)
-        {
-            HUDManager.Instance.HideInteractPrompt();
-        }
+    public void Interact(GameObject interactor)
+    {
+        TryOpenWithKey();
     }
 
     public void TryOpenWithKey()
@@ -67,59 +49,37 @@ public class Level05ChamberDoor : MonoBehaviour
         }
 
         if (HUDManager.Instance != null)
-        {
-            HUDManager.Instance.ShowInteractPrompt(doorName + " needs its special key");
-        }
+            HUDManager.Instance.ShowTimedMessage(doorName + " needs its special key", 2f);
     }
 
     public void Open()
     {
         if (opened)
-        {
             return;
-        }
 
         opened = true;
         if (treasureObject != null)
-        {
             treasureObject.SetActive(true);
-        }
 
         gameObject.SetActive(false);
 
         if (InventoryManager.Instance != null)
-        {
             InventoryManager.Instance.RefreshInventory();
-        }
+
+        if (HUDManager.Instance != null)
+            HUDManager.Instance.ShowTimedMessage(doorName + " opened", 2f);
     }
 
-    private void EnsurePlayer()
+    private bool IsWithinRange(GameObject interactor)
     {
-        if (player != null)
-        {
-            return;
-        }
+        if (interactor == null)
+            return false;
 
-        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
-        if (playerObject != null)
-        {
-            player = playerObject.transform;
-        }
-    }
+        Transform origin = interactor.transform;
+        PlayerMovement movement = interactor.GetComponent<PlayerMovement>();
+        if (movement != null && movement.ViewTransform != null)
+            origin = movement.ViewTransform;
 
-    private bool WasInteractPressed()
-    {
-#if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
-        {
-            return true;
-        }
-#endif
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-        return Input.GetKeyDown(KeyCode.E);
-#else
-        return false;
-#endif
+        return Vector3.Distance(transform.position, origin.position) <= interactDistance;
     }
 }

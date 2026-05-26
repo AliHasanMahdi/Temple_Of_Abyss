@@ -1,9 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
-public class AN_DoorKey : MonoBehaviour
+public class AN_DoorKey : MonoBehaviour, IPlayerInteractable
 {
     public enum KeyType
     {
@@ -11,41 +8,86 @@ public class AN_DoorKey : MonoBehaviour
         Blue
     }
 
+    [Header("Legacy Compatibility")]
+    [Tooltip("Older door prefabs serialized this flag instead of keyType.")]
+    public bool isRedKey = true;
+
     [Header("Key Settings")]
     public KeyType keyType;
 
-    [Tooltip("Unique ID for this key — used to stop it respawning after death")]
-    public string keyID = "Key_01";
+    [Tooltip("Unique ID for collectible keys so they do not respawn after a saved checkpoint.")]
+    public string keyID = string.Empty;
 
-    [Tooltip("How close the player must be to pick up the key")]
+    [Tooltip("How close the player must be to interact with the key.")]
     public float pickupRange = 2f;
 
     private AN_HeroInteractive hero;
+    private AN_DoorScript linkedDoor;
+    private Collider interactionCollider;
+
+    bool IsDoorLockKey => linkedDoor != null && string.IsNullOrEmpty(keyID);
+    bool IsRedKeyType => keyType == KeyType.Red;
+
+    void Awake()
+    {
+        linkedDoor = GetComponentInParent<AN_DoorScript>();
+        interactionCollider = GetComponent<Collider>() ?? GetComponentInChildren<Collider>();
+        SyncLegacyFields();
+    }
 
     void Start()
     {
         hero = Object.FindAnyObjectByType<AN_HeroInteractive>();
+        SyncLegacyFields();
 
         if (hero == null)
             Debug.LogError("[AN_DoorKey] No AN_HeroInteractive found! " + gameObject.name + " won't work.");
 
-        // Only destroy (don't respawn) if the pickup was confirmed by a checkpoint save on disk.
-        // If the player picked it up but died before a checkpoint, IsKeyPickedUp returns false
-        // (pending memory was cleared on scene reload) so the key correctly respawns.
-        if (SaveSystem.Instance != null && SaveSystem.Instance.IsKeyPickedUp(keyID))
+        if (!IsDoorLockKey &&
+            SaveSystem.Instance != null &&
+            !string.IsNullOrEmpty(keyID) &&
+            SaveSystem.Instance.IsKeyPickedUp(keyID))
         {
-            Debug.Log("[AN_DoorKey] Key already collected and saved — not respawning: " + keyID);
+            Debug.Log("[AN_DoorKey] Key already collected and saved - not respawning: " + keyID);
             Destroy(gameObject);
+            return;
         }
+
+        if (IsDoorLockKey && linkedDoor != null && !linkedDoor.RequiresKey)
+            gameObject.SetActive(false);
     }
 
-    void Update()
+    public bool CanInteract(GameObject interactor)
     {
-        if (hero == null) return;
-        if (!InRange()) return;
+        if (!enabled || !gameObject.activeInHierarchy)
+            return false;
 
-        if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
-            PickUp();
+        if (IsDoorLockKey)
+            return linkedDoor != null && linkedDoor.RequiresKey && linkedDoor.CanInteract(interactor);
+
+        return InRange(interactor);
+    }
+
+    public string GetPromptText()
+    {
+        if (IsDoorLockKey)
+            return linkedDoor != null ? linkedDoor.GetPromptText() : "Press E to unlock door";
+
+        return "Press E to collect " + (IsRedKeyType ? "Red Key" : "Blue Key");
+    }
+
+    public void Interact(GameObject interactor)
+    {
+        if (interactor != null)
+            hero = interactor.GetComponent<AN_HeroInteractive>() ?? interactor.GetComponentInChildren<AN_HeroInteractive>();
+
+        if (IsDoorLockKey)
+        {
+            UnlockDoor(interactor);
+            return;
+        }
+
+        PickUp();
     }
 
     void PickUp()
@@ -53,46 +95,59 @@ public class AN_DoorKey : MonoBehaviour
         if (hero == null)
             return;
 
-        bool isRedKey = keyType == KeyType.Red;
-        hero.AddKey(isRedKey);
+        hero.AddKey(IsRedKeyType);
+        InventoryManager.Instance?.AddKey(IsRedKeyType);
 
-        if (InventoryManager.Instance != null)
-            InventoryManager.Instance.AddKey(isRedKey);
+        Debug.Log("[AN_DoorKey] " + (IsRedKeyType ? "Red" : "Blue") + " Key picked up!");
 
-        switch (keyType)
-        {
-            case KeyType.Red:
-                Debug.Log("[AN_DoorKey] Red Key picked up!");
-                break;
-            case KeyType.Blue:
-                Debug.Log("[AN_DoorKey] Blue Key picked up!");
-                break;
-        }
+        if (SaveSystem.Instance != null && !string.IsNullOrEmpty(keyID))
+            SaveSystem.Instance.PendingKeyPickup(keyID, IsRedKeyType);
 
-        // Held in memory only — flushed to disk when player touches a checkpoint.
-        // If the player dies before that, the scene reloads, pending memory is gone,
-        // and this key will respawn correctly.
-        if (SaveSystem.Instance != null)
-            SaveSystem.Instance.PendingKeyPickup(keyID, isRedKey);
-
-        if (HUDManager.Instance != null)
-            HUDManager.Instance.ShowKeyMessage(isRedKey);
-
+        HUDManager.Instance?.ShowKeyMessage(IsRedKeyType);
         Destroy(gameObject);
     }
 
-    bool InRange()
+    void UnlockDoor(GameObject interactor)
     {
-        if (Camera.main == null) return false;
-        return Vector3.Distance(
-            transform.position,
-            Camera.main.transform.position
-        ) < pickupRange;
+        if (linkedDoor == null)
+            return;
+
+        bool requiredBefore = linkedDoor.RequiresKey;
+        linkedDoor.Interact(interactor);
+
+        if (requiredBefore && !linkedDoor.RequiresKey)
+            gameObject.SetActive(false);
+    }
+
+    void SyncLegacyFields()
+    {
+        if (keyType == KeyType.Red && !isRedKey)
+            keyType = KeyType.Blue;
+
+        isRedKey = IsRedKeyType;
+    }
+
+    bool InRange(GameObject interactor)
+    {
+        if (interactor == null)
+            return false;
+
+        Transform origin = interactor.transform;
+        PlayerMovement movement = interactor.GetComponent<PlayerMovement>();
+        if (movement != null && movement.ViewTransform != null)
+            origin = movement.ViewTransform;
+
+        Vector3 keyPosition = interactionCollider != null
+            ? interactionCollider.ClosestPoint(origin.position)
+            : transform.position;
+
+        return Vector3.Distance(keyPosition, origin.position) < pickupRange;
     }
 
     void OnDrawGizmosSelected()
     {
-        Gizmos.color = keyType == KeyType.Red ? Color.red : Color.blue;
+        SyncLegacyFields();
+        Gizmos.color = IsRedKeyType ? Color.red : Color.blue;
         Gizmos.DrawWireSphere(transform.position, pickupRange);
     }
 }
