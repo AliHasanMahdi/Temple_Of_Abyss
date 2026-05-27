@@ -62,6 +62,9 @@ public class AN_DoorKey : MonoBehaviour
                 break;
         }
 
+        if (InventoryManager.Instance != null)
+            InventoryManager.Instance.AddKey(keyType == KeyType.Red);
+
         // Held in memory only — flushed to disk when player touches a checkpoint.
         // If the player dies before that, the scene reloads, pending memory is gone,
         // and this key will respawn correctly.

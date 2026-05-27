@@ -47,7 +47,13 @@ public class MainMenu : MonoBehaviour
     public void NewGame()
     {
         if (SaveSystem.Instance != null)
+        {
             SaveSystem.Instance.DeleteSave();
+        }
+        else
+        {
+            SaveSystem.ClearSavedData();
+        }
 
         // Show HUD before entering game
         if (HUDManager.Instance != null)

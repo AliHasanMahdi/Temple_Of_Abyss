@@ -23,6 +23,8 @@ public class InventoryManager : MonoBehaviour
     private Sprite keySprite;
     private Sprite questItemSprite;
     private int keyCount;
+    private int redKeyCount;
+    private int blueKeyCount;
 
     void Awake()
     {
@@ -109,27 +111,86 @@ public class InventoryManager : MonoBehaviour
     public void AddKey(bool isRedKey)
     {
         keyCount++;
+        if (isRedKey)
+        {
+            redKeyCount++;
+        }
+        else
+        {
+            blueKeyCount++;
+        }
+
+        SyncHeroKeyFlags();
         RefreshSlots();
     }
 
     public void RemoveKey(bool isRedKey)
     {
-        if (keyCount > 0)
-        {
-            keyCount--;
-        }
-
-        RefreshSlots();
+        TryRemoveKey(isRedKey);
     }
 
     public void RemoveAnyKey()
     {
-        if (keyCount > 0)
+        TryRemoveAnyKey();
+    }
+
+    public bool HasKey(bool isRedKey)
+    {
+        if (keyCount <= 0)
         {
-            keyCount--;
+            return false;
         }
 
+        return isRedKey ? redKeyCount > 0 : blueKeyCount > 0;
+    }
+
+    public bool HasAnyKey()
+    {
+        return keyCount > 0;
+    }
+
+    public bool TryRemoveKey(bool isRedKey)
+    {
+        if (!HasKey(isRedKey))
+        {
+            return false;
+        }
+
+        keyCount--;
+        if (isRedKey)
+        {
+            redKeyCount--;
+        }
+        else
+        {
+            blueKeyCount--;
+        }
+
+        SyncHeroKeyFlags();
         RefreshSlots();
+        return true;
+    }
+
+    public bool TryRemoveAnyKey()
+    {
+        if (keyCount <= 0)
+        {
+            return false;
+        }
+
+        keyCount--;
+        if (redKeyCount > 0)
+        {
+            redKeyCount--;
+        }
+        else if (blueKeyCount > 0)
+        {
+            blueKeyCount--;
+        }
+
+        SyncHeroKeyFlags();
+        RefreshSlots();
+        return true;
     }
 
     public void SyncKeysFromPlayer()
@@ -164,22 +225,42 @@ public class InventoryManager : MonoBehaviour
             return;
         }
 
-        int heroKeyCount = 0;
-        if (hero.RedKey)
+        bool changed = false;
+        if (hero.RedKey && redKeyCount == 0)
         {
-            heroKeyCount++;
+            redKeyCount = 1;
+            changed = true;
         }
 
-        if (hero.BlueKey)
+        if (hero.BlueKey && blueKeyCount == 0)
         {
-            heroKeyCount++;
+            blueKeyCount = 1;
+            changed = true;
         }
 
+        int heroKeyCount = redKeyCount + blueKeyCount;
         if (heroKeyCount > keyCount)
         {
             keyCount = heroKeyCount;
+            changed = true;
+        }
+
+        if (changed)
+        {
             RefreshSlots();
         }
+    }
+
+    private void SyncHeroKeyFlags()
+    {
+        AN_HeroInteractive hero = FindObjectOfType<AN_HeroInteractive>();
+        if (hero == null)
+        {
+            return;
+        }
+
+        hero.RedKey = redKeyCount > 0;
+        hero.BlueKey = blueKeyCount > 0;
     }
 
     private void RefreshSlots()

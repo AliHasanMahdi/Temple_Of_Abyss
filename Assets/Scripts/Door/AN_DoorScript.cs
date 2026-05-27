@@ -106,20 +106,20 @@ public class AN_DoorScript : MonoBehaviour
         // Try to unlock with keys
         if (HeroInteractive != null)
         {
-            if (RedLocked && HeroInteractive.RedKey)
+            if (RedLocked && HasKeyAvailable(true))
             {
                 RedLocked = false;
-                HeroInteractive.RedKey = false;
+                ConsumeKey(true);
                 PlayDoorSoundAudible(unlockSound);
 
                 // Store in memory only — written to disk when player hits a checkpoint
                 if (SaveSystem.Instance != null)
                     SaveSystem.Instance.PendingDoorUnlocked(doorID);
             }
-            else if (BlueLocked && HeroInteractive.BlueKey)
+            else if (BlueLocked && HasKeyAvailable(false))
             {
                 BlueLocked = false;
-                HeroInteractive.BlueKey = false;
+                ConsumeKey(false);
                 PlayDoorSoundAudible(unlockSound);
 
                 // Store in memory only — written to disk when player hits a checkpoint
@@ -192,6 +192,34 @@ public class AN_DoorScript : MonoBehaviour
             unlockSound = TempleAudio.LoadClip("TempleAudio/SFX/Unlock 1");
     }
     // ─────────────────────────────────────────────────────────────
+
+    bool HasKeyAvailable(bool isRedKey)
+    {
+        if (InventoryManager.Instance != null)
+        {
+            return InventoryManager.Instance.HasKey(isRedKey);
+        }
+
+        return isRedKey ? HeroInteractive.RedKey : HeroInteractive.BlueKey;
+    }
+
+    void ConsumeKey(bool isRedKey)
+    {
+        if (InventoryManager.Instance != null &&
+            InventoryManager.Instance.TryRemoveKey(isRedKey))
+        {
+            return;
+        }
+
+        if (isRedKey)
+        {
+            HeroInteractive.RedKey = false;
+        }
+        else
+        {
+            HeroInteractive.BlueKey = false;
+        }
+    }
 
     bool NearView()
     {

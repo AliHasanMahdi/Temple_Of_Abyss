@@ -95,13 +95,13 @@ public class Level5AN_DoorScript : MonoBehaviour
 
         if (RedLocked)
         {
-            if (!HeroInteractive.RedKey)
+            if (!HasKeyAvailable(true))
             {
                 Debug.Log("Door is locked! You need a key.");
                 return false;
             }
 
-            HeroInteractive.RedKey = false;
+            ConsumeKey(true);
             RedLocked = false;
             unlockedWithKey = true;
             Locked = false;
@@ -111,13 +111,13 @@ public class Level5AN_DoorScript : MonoBehaviour
 
         if (BlueLocked)
         {
-            if (!HeroInteractive.BlueKey)
+            if (!HasKeyAvailable(false))
             {
                 Debug.Log("Door is locked! You need a key.");
                 return false;
             }
 
-            HeroInteractive.BlueKey = false;
+            ConsumeKey(false);
             BlueLocked = false;
             unlockedWithKey = true;
             Locked = false;
@@ -128,6 +128,34 @@ public class Level5AN_DoorScript : MonoBehaviour
         SyncInventoryKeys();
         OpenDoor();
         return true;
+    }
+
+    private bool HasKeyAvailable(bool isRedKey)
+    {
+        if (InventoryManager.Instance != null)
+        {
+            return InventoryManager.Instance.HasKey(isRedKey);
+        }
+
+        return isRedKey ? HeroInteractive.RedKey : HeroInteractive.BlueKey;
+    }
+
+    private void ConsumeKey(bool isRedKey)
+    {
+        if (InventoryManager.Instance != null &&
+            InventoryManager.Instance.TryRemoveKey(isRedKey))
+        {
+            return;
+        }
+
+        if (isRedKey)
+        {
+            HeroInteractive.RedKey = false;
+        }
+        else
+        {
+            HeroInteractive.BlueKey = false;
+        }
     }
 
     private void OpenDoor()
