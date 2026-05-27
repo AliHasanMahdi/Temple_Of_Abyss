@@ -131,6 +131,19 @@ public class TempleAudio : MonoBehaviour
             Instance.uiSource.PlayOneShot(clip, Mathf.Clamp01(volume));
     }
 
+<<<<<<< Updated upstream
+=======
+    public static float GetSfxVolume()
+    {
+        return Mathf.Clamp01(PlayerPrefs.GetFloat("SFXVolume", 1f));
+    }
+
+    public static float ScaleSfxVolume(float volume)
+    {
+        return Mathf.Clamp01(volume) * GetSfxVolume();
+    }
+
+>>>>>>> Stashed changes
     public static void SetMusicVolume(float volume)
     {
         EnsureInstance();

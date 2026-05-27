@@ -1,4 +1,8 @@
+<<<<<<< Updated upstream
 %YAML 1.1
+=======
+﻿%YAML 1.1
+>>>>>>> Stashed changes
 %TAG !u! tag:unity3d.com,2011:
 --- !u!1 &1371891134659537257
 GameObject:
@@ -283,4 +287,17 @@ MonoBehaviour:
   BlueLocked: 0
   isOpened: 0
   OpenSpeed: 3
+<<<<<<< Updated upstream
   rbDoor: {fileID: 0}
+=======
+  doorID: Door_01
+  doorAudioSource: {fileID: 0}
+  openSound: {fileID: 0}
+  closeSound: {fileID: 0}
+  lockedSound: {fileID: 8300000, guid: cfb34fff51b0847e599e6831ba854864, type: 3}
+  unlockSound: {fileID: 8300000, guid: c70d84ab81270450ca59ba4554ce5a6d, type: 3}
+  doorVolume: 0.8
+  playThroughSfxMixer: 1
+  playOpenCloseSounds: 0
+
+>>>>>>> Stashed changes

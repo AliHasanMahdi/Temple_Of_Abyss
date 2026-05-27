@@ -324,7 +324,11 @@ public class PlayerMovement : MonoBehaviour
             clip = clips[i];
 
         footstepAudioSource.pitch = Random.Range(0.92f, 1.08f); // slight pitch variation
+<<<<<<< Updated upstream
         footstepAudioSource.PlayOneShot(clip, footstepVolume);
+=======
+        footstepAudioSource.PlayOneShot(clip, TempleAudio.ScaleSfxVolume(footstepVolume));
+>>>>>>> Stashed changes
     }
 
     bool HasPlayableClips(AudioClip[] clips)

@@ -39,8 +39,16 @@ public class AN_Button : MonoBehaviour
 
     Animator anim;
     AudioSource audioSource;
+<<<<<<< Updated upstream
     AudioClip buttonSound;
     AudioClip leverSound;
+=======
+    [Header("Interaction Sounds")]
+    [SerializeField] AudioClip buttonSound;
+    [SerializeField] AudioClip leverSound;
+    [Range(0f, 1f)]
+    public float interactionVolume = 0.75f;
+>>>>>>> Stashed changes
 
     // NearView()
     float distance;
@@ -54,6 +62,7 @@ public class AN_Button : MonoBehaviour
         if (audioSource == null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
+<<<<<<< Updated upstream
             audioSource.spatialBlend = 1f;
             audioSource.rolloffMode = AudioRolloffMode.Linear;
             audioSource.minDistance = 1f;
@@ -63,6 +72,13 @@ public class AN_Button : MonoBehaviour
         else
         {
             audioSource.maxDistance = Mathf.Max(audioSource.maxDistance, 12f);
+=======
+            ConfigureAudioSource();
+        }
+        else
+        {
+            ConfigureAudioSource();
+>>>>>>> Stashed changes
         }
 
         LoadDefaultSound();
@@ -169,8 +185,13 @@ public class AN_Button : MonoBehaviour
         if (audioSource == null || clip == null) return;
 
         audioSource.pitch = Random.Range(0.95f, 1.05f);
+<<<<<<< Updated upstream
         audioSource.PlayOneShot(clip, 0.75f);
         TempleAudio.PlaySfx(clip, 0.75f);
+=======
+        audioSource.PlayOneShot(clip, TempleAudio.ScaleSfxVolume(interactionVolume));
+        TempleAudio.PlaySfx(clip, interactionVolume);
+>>>>>>> Stashed changes
     }
 
     void LoadDefaultSound()
@@ -180,4 +201,18 @@ public class AN_Button : MonoBehaviour
         if (leverSound == null)
             leverSound = TempleAudio.LoadClip("TempleAudio/SFX/clank1");
     }
+<<<<<<< Updated upstream
+=======
+
+    void ConfigureAudioSource()
+    {
+        if (audioSource == null) return;
+
+        audioSource.spatialBlend = 1f;
+        audioSource.rolloffMode = AudioRolloffMode.Linear;
+        audioSource.minDistance = Mathf.Max(audioSource.minDistance, 1f);
+        audioSource.maxDistance = Mathf.Max(audioSource.maxDistance, 12f);
+        audioSource.playOnAwake = false;
+    }
+>>>>>>> Stashed changes
 }

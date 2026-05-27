@@ -159,3 +159,10 @@ MonoBehaviour:
   spearDamage: 40
   spearLifetime: 4
   shootDirection: {x: 0, y: 0, z: 1}
+<<<<<<< Updated upstream
+=======
+  arrowSound: {fileID: 8300000, guid: f367effc85da862409707ae0f1568895, type: 3}
+  arrowVolume: 0.35
+  arrowAudibleDistance: 7
+  audioSource: {fileID: 0}
+>>>>>>> Stashed changes

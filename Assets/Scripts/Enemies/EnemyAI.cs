@@ -41,10 +41,17 @@ public class EnemyAI : MonoBehaviour
     public float chaseStepRate = 2.4f;
 
     [Range(0f, 1f)]
+<<<<<<< Updated upstream
     public float footstepVolume = 0.7f;
 
     [Tooltip("Enemy walk sound only plays when the player is within this distance.")]
     public float footstepAudibleDistance = 12f;
+=======
+    public float footstepVolume = 0.35f;
+
+    [Tooltip("Enemy walk sound only plays when the player is within this distance.")]
+    public float footstepAudibleDistance = 7f;
+>>>>>>> Stashed changes
     // ─────────────────────────────────────────────────────────────
 
     private enum State { Patrolling, Chasing, Returning, Dead }
@@ -71,6 +78,11 @@ public class EnemyAI : MonoBehaviour
 
     // Footstep timing
     private float footstepTimer = 0f;
+<<<<<<< Updated upstream
+=======
+    const float MaxFootstepAudibleDistance = 7f;
+    const float FootstepVolumeScale = 0.45f;
+>>>>>>> Stashed changes
 
     void Start()
     {
@@ -83,7 +95,16 @@ public class EnemyAI : MonoBehaviour
             enemyCamera = GetComponentInChildren<Camera>();
 
         if (enemyCamera != null)
+<<<<<<< Updated upstream
             enemyCamera.enabled = false;
+=======
+        {
+            enemyCamera.enabled = false;
+            AudioListener enemyListener = enemyCamera.GetComponent<AudioListener>();
+            if (enemyListener != null)
+                enemyListener.enabled = false;
+        }
+>>>>>>> Stashed changes
 
         if (agent == null)
         {
@@ -98,6 +119,7 @@ public class EnemyAI : MonoBehaviour
         lastPosition = transform.position;
         GoToNextPatrolPoint();
 
+<<<<<<< Updated upstream
         // Auto-create 3D AudioSource if not assigned
         if (footstepAudioSource == null)
         {
@@ -113,6 +135,13 @@ public class EnemyAI : MonoBehaviour
             footstepAudioSource.spatialBlend = 0f;
             footstepAudioSource.maxDistance = Mathf.Max(footstepAudioSource.maxDistance, footstepAudibleDistance);
         }
+=======
+        // Auto-create/configure 3D AudioSource if not assigned.
+        if (footstepAudioSource == null)
+            footstepAudioSource = gameObject.AddComponent<AudioSource>();
+
+        ConfigureFootstepAudioSource();
+>>>>>>> Stashed changes
 
         if (!HasPlayableClips(patrolFootstepClips))
             patrolFootstepClips = TempleAudio.LoadClips("TempleAudio/Enemy/freesound_community-rattling-bones-105394");
@@ -458,7 +487,12 @@ public class EnemyAI : MonoBehaviour
         if (agent == null || footstepAudioSource == null) return;
         if (player == null) return;
 
+<<<<<<< Updated upstream
         if (Vector3.Distance(transform.position, player.position) > footstepAudibleDistance)
+=======
+        float audibleDistance = EffectiveFootstepAudibleDistance();
+        if (Vector3.Distance(transform.position, player.position) > audibleDistance)
+>>>>>>> Stashed changes
         {
             footstepTimer = 0f;
             return;
@@ -495,8 +529,33 @@ public class EnemyAI : MonoBehaviour
             clip = clips[i];
 
         footstepAudioSource.pitch = Random.Range(0.90f, 1.10f);
+<<<<<<< Updated upstream
         footstepAudioSource.PlayOneShot(clip, footstepVolume);
         TempleAudio.PlaySfx(clip, footstepVolume);
+=======
+        footstepAudioSource.PlayOneShot(clip, EffectiveFootstepVolume());
+    }
+
+    void ConfigureFootstepAudioSource()
+    {
+        if (footstepAudioSource == null) return;
+
+        footstepAudioSource.spatialBlend = 1f;
+        footstepAudioSource.rolloffMode = AudioRolloffMode.Linear;
+        footstepAudioSource.minDistance = 0.5f;
+        footstepAudioSource.maxDistance = EffectiveFootstepAudibleDistance();
+        footstepAudioSource.playOnAwake = false;
+    }
+
+    float EffectiveFootstepAudibleDistance()
+    {
+        return Mathf.Min(footstepAudibleDistance, MaxFootstepAudibleDistance);
+    }
+
+    float EffectiveFootstepVolume()
+    {
+        return TempleAudio.ScaleSfxVolume(footstepVolume * FootstepVolumeScale);
+>>>>>>> Stashed changes
     }
 
     bool HasPlayableClips(AudioClip[] clips)

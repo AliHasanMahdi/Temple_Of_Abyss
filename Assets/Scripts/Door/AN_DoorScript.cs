@@ -26,10 +26,17 @@ public class AN_DoorScript : MonoBehaviour
     [Tooltip("AudioSource on this door GameObject (3D)")]
     public AudioSource doorAudioSource;
 
+<<<<<<< Updated upstream
     [Tooltip("Sound played when the door opens (e.g. Closing Door With Creak Latch Shut 3.wav used reversed, or Open Door X.wav)")]
     public AudioClip openSound;
 
     [Tooltip("Sound played when the door closes (e.g. Close Door 12.wav)")]
+=======
+    [Tooltip("Optional. Door open sound is disabled by this script unless playOpenCloseSounds is enabled.")]
+    public AudioClip openSound;
+
+    [Tooltip("Optional. Door close sound is disabled by this script unless playOpenCloseSounds is enabled.")]
+>>>>>>> Stashed changes
     public AudioClip closeSound;
 
     [Tooltip("Sound played when player tries to open a locked door (e.g. Close Metal Door Locker Cabinet Box 1.wav)")]
@@ -40,6 +47,15 @@ public class AN_DoorScript : MonoBehaviour
 
     [Range(0f, 1f)]
     public float doorVolume = 0.8f;
+<<<<<<< Updated upstream
+=======
+
+    [Tooltip("Also play door sounds through the main SFX mixer so level doors stay audible when triggered.")]
+    public bool playThroughSfxMixer = true;
+
+    [Tooltip("Keep off when doors should only make locked/unlock sounds.")]
+    public bool playOpenCloseSounds = false;
+>>>>>>> Stashed changes
     // ─────────────────────────────────────────────────────────────
 
     private AN_HeroInteractive HeroInteractive;
@@ -56,6 +72,7 @@ public class AN_DoorScript : MonoBehaviour
         mainCam = Camera.main;
         HeroInteractive = Object.FindAnyObjectByType<AN_HeroInteractive>();
 
+<<<<<<< Updated upstream
         // Auto-create 3D AudioSource if not assigned
         if (doorAudioSource == null)
         {
@@ -70,6 +87,17 @@ public class AN_DoorScript : MonoBehaviour
         {
             doorAudioSource.maxDistance = Mathf.Max(doorAudioSource.maxDistance, 25f);
         }
+=======
+        // Auto-create/configure a 3D AudioSource so scene-assigned sources cannot be silent by accident.
+        if (doorAudioSource == null)
+            doorAudioSource = gameObject.AddComponent<AudioSource>();
+
+        doorAudioSource.spatialBlend = 1f;
+        doorAudioSource.rolloffMode = AudioRolloffMode.Linear;
+        doorAudioSource.minDistance = Mathf.Max(doorAudioSource.minDistance, 1f);
+        doorAudioSource.maxDistance = Mathf.Max(doorAudioSource.maxDistance, 25f);
+        doorAudioSource.playOnAwake = false;
+>>>>>>> Stashed changes
 
         LoadDefaultSounds();
 
@@ -96,6 +124,11 @@ public class AN_DoorScript : MonoBehaviour
 
     public void Action()
     {
+<<<<<<< Updated upstream
+=======
+        bool playedUnlockSound = false;
+
+>>>>>>> Stashed changes
         // Hard locked — play locked sound and stop
         if (Locked || !CanOpen)
         {
@@ -111,6 +144,10 @@ public class AN_DoorScript : MonoBehaviour
                 RedLocked = false;
                 HeroInteractive.RedKey = false;
                 PlayDoorSoundAudible(unlockSound);
+<<<<<<< Updated upstream
+=======
+                playedUnlockSound = true;
+>>>>>>> Stashed changes
 
                 // Store in memory only — written to disk when player hits a checkpoint
                 if (SaveSystem.Instance != null)
@@ -121,6 +158,10 @@ public class AN_DoorScript : MonoBehaviour
                 BlueLocked = false;
                 HeroInteractive.BlueKey = false;
                 PlayDoorSoundAudible(unlockSound);
+<<<<<<< Updated upstream
+=======
+                playedUnlockSound = true;
+>>>>>>> Stashed changes
 
                 // Store in memory only — written to disk when player hits a checkpoint
                 if (SaveSystem.Instance != null)
@@ -142,12 +183,24 @@ public class AN_DoorScript : MonoBehaviour
         if (isOpened && CanClose)
         {
             isOpened = false;
+<<<<<<< Updated upstream
             PlayDoorSound(closeSound);
+=======
+            if (playOpenCloseSounds)
+                PlayDoorSoundAudible(closeSound);
+>>>>>>> Stashed changes
         }
         else if (!isOpened)
         {
             isOpened = true;
+<<<<<<< Updated upstream
             PlayDoorSound(openSound);
+=======
+            if (playOpenCloseSounds)
+                PlayDoorSoundAudible(openSound);
+            else if (!playedUnlockSound)
+                PlayDoorSoundAudible(unlockSound);
+>>>>>>> Stashed changes
 
             if (rbDoor != null)
                 rbDoor.AddRelativeTorque(new Vector3(0, 0, 20f));
@@ -157,6 +210,7 @@ public class AN_DoorScript : MonoBehaviour
     // ── DOOR SOUND HELPERS ────────────────────────────────────────
     AudioClip PlayDoorSound(AudioClip clip)
     {
+<<<<<<< Updated upstream
         if (clip == null)
         {
             LoadDefaultSounds();
@@ -165,13 +219,24 @@ public class AN_DoorScript : MonoBehaviour
         if (doorAudioSource == null || clip == null) return clip;
         doorAudioSource.pitch = Random.Range(0.95f, 1.05f);
         doorAudioSource.PlayOneShot(clip, doorVolume);
+=======
+        if (clip == null) return null;
+        if (doorAudioSource == null || clip == null) return clip;
+        doorAudioSource.pitch = Random.Range(0.95f, 1.05f);
+        doorAudioSource.PlayOneShot(clip, TempleAudio.ScaleSfxVolume(doorVolume));
+>>>>>>> Stashed changes
         return clip;
     }
 
     void PlayDoorSoundAudible(AudioClip clip)
     {
         clip = PlayDoorSound(clip);
+<<<<<<< Updated upstream
         TempleAudio.PlaySfx(clip, doorVolume);
+=======
+        if (playThroughSfxMixer)
+            TempleAudio.PlaySfx(clip, doorVolume);
+>>>>>>> Stashed changes
     }
 
     public void PlayUnlockSound()
@@ -182,9 +247,15 @@ public class AN_DoorScript : MonoBehaviour
 
     void LoadDefaultSounds()
     {
+<<<<<<< Updated upstream
         if (openSound == null)
             openSound = TempleAudio.LoadClip("TempleAudio/SFX/Open Door 13");
         if (closeSound == null)
+=======
+        if (playOpenCloseSounds && openSound == null)
+            openSound = TempleAudio.LoadClip("TempleAudio/SFX/Open Door 13");
+        if (playOpenCloseSounds && closeSound == null)
+>>>>>>> Stashed changes
             closeSound = TempleAudio.LoadClip("TempleAudio/SFX/Close Door 12");
         if (lockedSound == null)
             lockedSound = TempleAudio.LoadClip("TempleAudio/SFX/Locked Door 2");
@@ -212,4 +283,8 @@ public class AN_DoorScript : MonoBehaviour
         hinge.limits = hingeLim;
         hinge.useLimits = true;
     }
+<<<<<<< Updated upstream
 }
+=======
+}
+>>>>>>> Stashed changes
