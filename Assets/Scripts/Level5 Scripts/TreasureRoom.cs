@@ -39,7 +39,7 @@ public class TreasureRoom : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             playerInRoom = true;
-            promptText.text = "You found the Treasure Room!\npress E to collect!";
+            promptText.text = "You found the Treasure Room!";
         }
     }
 
@@ -59,7 +59,7 @@ public class TreasureRoom : MonoBehaviour
         if (isNear)
             promptText.text = "Press E to collect the Treasure!";
         else if (playerInRoom)
-            promptText.text = "You found the Treasure Room!\npress E to collect!";
+            promptText.text = "You found the Treasure Room!";
         else
             promptText.text = "";
     }
