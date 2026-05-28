@@ -166,6 +166,18 @@ public class DemonAI : MonoBehaviour
         agent.isStopped = false;
     }
 
+    // Called by the cutscene to make the demon start hunting immediately
+    public void StartHunting()
+    {
+        if (isWarning)
+        {
+            isWarning = false;
+            warningTimer = 0f;
+            agent.isStopped = false;
+            Debug.Log("Demon hunting triggered externally - warning skipped.");
+        }
+    }
+
     IEnumerator JumpOverLink()
     {
         isJumping = true;
