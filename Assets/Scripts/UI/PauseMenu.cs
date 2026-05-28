@@ -20,6 +20,7 @@ public class PauseMenu : MonoBehaviour
 
     private bool isPaused = false;
     private CanvasGroup pauseCanvasGroup;
+    public bool IsPaused => isPaused;
 
     void Awake()
     {
@@ -81,7 +82,7 @@ public class PauseMenu : MonoBehaviour
         Time.timeScale = 0f;
         SetPausePanelVisible(true);
 
-        PlayerMovement pm = FindObjectOfType<PlayerMovement>();
+        PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
         if (pm != null) pm.OnPause();
     }
 
@@ -92,7 +93,7 @@ public class PauseMenu : MonoBehaviour
         SetPausePanelVisible(false);
         if (SettingsMenu.Instance != null) SettingsMenu.Instance.Close();
 
-        PlayerMovement pm = FindObjectOfType<PlayerMovement>();
+        PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
         if (pm != null) pm.OnResume();
     }
 

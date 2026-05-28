@@ -69,7 +69,7 @@ public class HUDManager : MonoBehaviour
         AutoBindScoreImage();
         ShowHUD(scene.name != "MainMenu");
 
-        PlayerHealth playerHealth = FindObjectOfType<PlayerHealth>();
+        PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
         if (playerHealth != null)
             UpdateHealth(playerHealth.currentHealth, playerHealth.maxHealth);
     }
@@ -127,10 +127,20 @@ public class HUDManager : MonoBehaviour
         if (interactBackground != null) interactBackground.SetActive(true);
     }
 
+    public void ShowInteractionPrompt(string message)
+    {
+        ShowInteractPrompt(message);
+    }
+
     public void HideInteractPrompt()
     {
         if (interactPromptText != null) interactPromptText.gameObject.SetActive(false);
         if (interactBackground != null) interactBackground.SetActive(false);
+    }
+
+    public void HideInteractionPrompt()
+    {
+        HideInteractPrompt();
     }
 
     public void ShowCheckpointMessage()
@@ -167,7 +177,7 @@ public class HUDManager : MonoBehaviour
     {
         if (healthBar == null)
         {
-            Slider[] sliders = FindObjectsOfType<Slider>(true);
+            Slider[] sliders = FindObjectsByType<Slider>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (Slider slider in sliders)
             {
                 if (slider.name == "HealthBar" || slider.name.Contains("Health"))
@@ -180,7 +190,7 @@ public class HUDManager : MonoBehaviour
 
         if (hpFill == null)
         {
-            Image[] images = FindObjectsOfType<Image>(true);
+            Image[] images = FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (Image image in images)
             {
                 if (image.name == "Hp_Fill" || image.name == "HP_Fill" || image.name == "HealthFill")
@@ -199,7 +209,7 @@ public class HUDManager : MonoBehaviour
     {
         if (scoreImage != null) return;
 
-        Image[] images = FindObjectsOfType<Image>(true);
+        Image[] images = FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (Image image in images)
         {
             if (image.name == "ScoreImage")

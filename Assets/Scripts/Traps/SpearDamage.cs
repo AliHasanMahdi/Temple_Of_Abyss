@@ -11,7 +11,7 @@ public class SpearDamage : MonoBehaviour
             PlayerHealth health = other.GetComponent<PlayerHealth>()
                                ?? other.GetComponentInParent<PlayerHealth>()
                                ?? other.GetComponentInChildren<PlayerHealth>()
-                               ?? FindObjectOfType<PlayerHealth>();
+                               ?? FindFirstObjectByType<PlayerHealth>();
 
             if (health != null)
             {

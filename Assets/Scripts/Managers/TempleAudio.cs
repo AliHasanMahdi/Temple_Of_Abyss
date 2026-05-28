@@ -166,7 +166,7 @@ public class TempleAudio : MonoBehaviour
 
     void RegisterSceneButtons()
     {
-        foreach (Button button in FindObjectsOfType<Button>(true))
+        foreach (Button button in FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             RegisterButtonInternal(button);
     }
 

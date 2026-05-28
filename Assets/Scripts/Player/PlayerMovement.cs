@@ -12,6 +12,10 @@ public class PlayerMovement : MonoBehaviour
     [Header("Mouse Look")]
     public float mouseSensitivity = 200f;
     public Transform playerCamera;
+    public Transform ViewTransform => playerCamera != null ? playerCamera : transform;
+    public bool IsGrounded => isGrounded;
+    public bool IsMoving => hasMovementInput;
+    public bool IsRunning => hasMovementInput && !isCrouching && Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
 
     [Header("Jump")]
     public float coyoteTime = 0.15f;

@@ -50,6 +50,17 @@ public class AN_Button : MonoBehaviour
     float angleView;
     Vector3 direction;
 
+    public bool IsPressed
+    {
+        get
+        {
+            if (!isLever || anim == null)
+                return false;
+
+            return anim.GetBool("LeverUp");
+        }
+    }
+
     void Start()
     {
         anim = GetComponent<Animator>();

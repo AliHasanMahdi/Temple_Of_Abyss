@@ -6,6 +6,7 @@ public class PlayerHealth : MonoBehaviour
 {
     public float maxHealth = 100f;
     public float currentHealth;
+    public bool IsDead => currentHealth <= 0f;
 
     [Header("Audio")]
     public AudioSource playerAudioSource;
