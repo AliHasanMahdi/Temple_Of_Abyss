@@ -42,7 +42,9 @@ public class FireTrap : MonoBehaviour
     {
         if (isActive && other.CompareTag("Player"))
         {
-            PlayerHealth health = other.GetComponent<PlayerHealth>();
+            PlayerHealth health = other.GetComponent<PlayerHealth>()
+                               ?? other.GetComponentInParent<PlayerHealth>()
+                               ?? other.GetComponentInChildren<PlayerHealth>();
             if (health != null)
                 health.TakeDamage(damage * Time.deltaTime);
         }

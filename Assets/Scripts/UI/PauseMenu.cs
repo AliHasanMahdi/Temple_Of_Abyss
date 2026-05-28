@@ -1,13 +1,16 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using TMPro;
+using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 public class PauseMenu : MonoBehaviour
 {
+    public static PauseMenu Instance;
+
     [Header("Panels")]
+    [FormerlySerializedAs("pausePanel")]
     public GameObject pauseMenuPanel;
-    public GameObject settingsPanel;
 
     [Header("Buttons")]
     public Button resumeButton;
@@ -16,71 +19,162 @@ public class PauseMenu : MonoBehaviour
     public Button mainMenuButton;
 
     private bool isPaused = false;
+    private CanvasGroup pauseCanvasGroup;
+    public bool IsPaused => isPaused;
+
+    void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+        EnsureCanvas();
+        EnsurePanelReference();
+        EnsureCanvasGroup();
+    }
 
     void Start()
     {
-        // Make sure pause menu is hidden at start
-        pauseMenuPanel.SetActive(false);
+        SetPausePanelVisible(false);
 
-        // Connect buttons
-        resumeButton.onClick.AddListener(Resume);
-        settingsButton.onClick.AddListener(ShowSettings);
-        restartButton.onClick.AddListener(RestartLevel);
-        mainMenuButton.onClick.AddListener(GoToMainMenu);
+        AddButtonListener(resumeButton, Resume);
+        AddButtonListener(settingsButton, OpenSettings);
+        AddButtonListener(restartButton, RestartLevel);
+        AddButtonListener(mainMenuButton, GoToMainMenu);
+    }
+
+    void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     void Update()
     {
-        // Press Escape to toggle pause
-        if (Input.GetKeyDown(KeyCode.Escape))
+        // Only allow ESC pause in game levels, not on menu screens
+        string scene = SceneManager.GetActiveScene().name;
+        if (scene == "MainMenu" || scene == "GameOver") return;
+
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
-            if (isPaused)
-                Resume();
-            else
-                Pause();
+            if (SettingsMenu.Instance != null && SettingsMenu.Instance.IsOpen)
+            {
+                SettingsMenu.Instance.Close();
+                return;
+            }
+
+            if (isPaused) Resume();
+            else Pause();
         }
     }
 
     public void Pause()
     {
-        pauseMenuPanel.SetActive(true);
-        Time.timeScale = 0f;    // freeze the game
         isPaused = true;
+        Time.timeScale = 0f;
+        SetPausePanelVisible(true);
 
-        // Unlock cursor so player can click buttons
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+        if (pm != null) pm.OnPause();
     }
 
     public void Resume()
     {
-        pauseMenuPanel.SetActive(false);
-        if (settingsPanel != null)
-            settingsPanel.SetActive(false);
-
-        Time.timeScale = 1f;    // unfreeze the game
         isPaused = false;
+        Time.timeScale = 1f;
+        SetPausePanelVisible(false);
+        if (SettingsMenu.Instance != null) SettingsMenu.Instance.Close();
 
-        // Lock cursor again for gameplay
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+        if (pm != null) pm.OnResume();
     }
 
-    public void ShowSettings()
+    public void OpenSettings()
     {
-        if (settingsPanel != null)
-            settingsPanel.SetActive(true);
+        if (SettingsMenu.Instance != null)
+            SettingsMenu.Instance.Open();
     }
 
     public void RestartLevel()
     {
-        Time.timeScale = 1f;    // always reset timeScale before loading
+        Time.timeScale = 1f;
+        isPaused = false;
+        SetPausePanelVisible(false);
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     public void GoToMainMenu()
     {
-        Time.timeScale = 1f;    // always reset timeScale before loading
+        Time.timeScale = 1f;
+        isPaused = false;
+        SetPausePanelVisible(false);
+        if (SettingsMenu.Instance != null) SettingsMenu.Instance.Close();
         SceneManager.LoadScene("MainMenu");
+    }
+
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        isPaused = false;
+        Time.timeScale = 1f;
+        SetPausePanelVisible(false);
+    }
+
+    void EnsurePanelReference()
+    {
+        if (pauseMenuPanel == null)
+            pauseMenuPanel = gameObject;
+    }
+
+    void EnsureCanvasGroup()
+    {
+        if (pauseMenuPanel == null) return;
+
+        pauseCanvasGroup = pauseMenuPanel.GetComponent<CanvasGroup>();
+        if (pauseCanvasGroup == null)
+            pauseCanvasGroup = pauseMenuPanel.AddComponent<CanvasGroup>();
+    }
+
+    void EnsureCanvas()
+    {
+        if (GetComponentInParent<Canvas>() != null) return;
+
+        Canvas canvas = gameObject.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 100;
+        gameObject.AddComponent<CanvasScaler>();
+        gameObject.AddComponent<GraphicRaycaster>();
+    }
+
+    void SetPausePanelVisible(bool visible)
+    {
+        EnsurePanelReference();
+        EnsureCanvasGroup();
+
+        if (pauseMenuPanel == null) return;
+
+        if (!pauseMenuPanel.activeSelf)
+            pauseMenuPanel.SetActive(true);
+
+        if (pauseCanvasGroup != null)
+        {
+            pauseCanvasGroup.alpha = visible ? 1f : 0f;
+            pauseCanvasGroup.interactable = visible;
+            pauseCanvasGroup.blocksRaycasts = visible;
+        }
+    }
+
+    void AddButtonListener(Button button, UnityEngine.Events.UnityAction action)
+    {
+        if (button == null) return;
+        TempleAudio.RegisterButton(button);
+        button.onClick.AddListener(action);
     }
 }
