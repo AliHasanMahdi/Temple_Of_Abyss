@@ -13,7 +13,6 @@ public class InventoryManager : MonoBehaviour
     public GridGenerator gridGen;
     public KeyCode legacyToggleKey = KeyCode.I;
     public bool pauseGameWhenOpen = true;
-    public bool IsOpen => isOpen;
 
     private bool isOpen;
     private CursorLockMode previousLockState;
@@ -24,6 +23,8 @@ public class InventoryManager : MonoBehaviour
     private Sprite keySprite;
     private Sprite questItemSprite;
     private int keyCount;
+    private int redKeyCount;
+    private int blueKeyCount;
 
     void Awake()
     {
@@ -109,17 +110,87 @@ public class InventoryManager : MonoBehaviour
 
     public void AddKey(bool isRedKey)
     {
-        SyncKeysFromHero();
+        keyCount++;
+        if (isRedKey)
+        {
+            redKeyCount++;
+        }
+        else
+        {
+            blueKeyCount++;
+        }
+
+        SyncHeroKeyFlags();
+        RefreshSlots();
     }
 
     public void RemoveKey(bool isRedKey)
     {
-        SyncKeysFromHero();
+        TryRemoveKey(isRedKey);
     }
 
     public void RemoveAnyKey()
     {
-        SyncKeysFromHero();
+        TryRemoveAnyKey();
+    }
+
+    public bool HasKey(bool isRedKey)
+    {
+        if (keyCount <= 0)
+        {
+            return false;
+        }
+
+        return isRedKey ? redKeyCount > 0 : blueKeyCount > 0;
+    }
+
+    public bool HasAnyKey()
+    {
+        return keyCount > 0;
+    }
+
+    public bool TryRemoveKey(bool isRedKey)
+    {
+        if (!HasKey(isRedKey))
+        {
+            return false;
+        }
+
+        keyCount--;
+        if (isRedKey)
+        {
+            redKeyCount--;
+        }
+        else
+        {
+            blueKeyCount--;
+        }
+
+        SyncHeroKeyFlags();
+        RefreshSlots();
+        return true;
+    }
+
+    public bool TryRemoveAnyKey()
+    {
+        if (keyCount <= 0)
+        {
+            return false;
+        }
+
+        keyCount--;
+        if (redKeyCount > 0)
+        {
+            redKeyCount--;
+        }
+        else if (blueKeyCount > 0)
+        {
+            blueKeyCount--;
+        }
+
+        SyncHeroKeyFlags();
+        RefreshSlots();
+        return true;
     }
 
     public void SyncKeysFromPlayer()
@@ -148,19 +219,48 @@ public class InventoryManager : MonoBehaviour
 
     private void SyncKeysFromHero()
     {
-        AN_HeroInteractive hero = Object.FindAnyObjectByType<AN_HeroInteractive>();
+        AN_HeroInteractive hero = FindObjectOfType<AN_HeroInteractive>();
         if (hero == null)
         {
             return;
         }
 
-        int heroKeyCount = hero.TotalKeyCount;
+        bool changed = false;
+        if (hero.RedKey && redKeyCount == 0)
+        {
+            redKeyCount = 1;
+            changed = true;
+        }
 
-        if (heroKeyCount != keyCount)
+        if (hero.BlueKey && blueKeyCount == 0)
+        {
+            blueKeyCount = 1;
+            changed = true;
+        }
+
+        int heroKeyCount = redKeyCount + blueKeyCount;
+        if (heroKeyCount > keyCount)
         {
             keyCount = heroKeyCount;
+            changed = true;
+        }
+
+        if (changed)
+        {
             RefreshSlots();
         }
+    }
+
+    private void SyncHeroKeyFlags()
+    {
+        AN_HeroInteractive hero = FindObjectOfType<AN_HeroInteractive>();
+        if (hero == null)
+        {
+            return;
+        }
+
+        hero.RedKey = redKeyCount > 0;
+        hero.BlueKey = blueKeyCount > 0;
     }
 
     private void RefreshSlots()
@@ -181,7 +281,7 @@ public class InventoryManager : MonoBehaviour
             bool hasKey = i == 0 && keyCount > 0;
             icon.enabled = hasKey && keySprite != null;
             icon.sprite = hasKey ? keySprite : null;
-            icon.color = Color.white;
+            icon.color = hasKey ? Color.white : Color.clear;
 
             if (slotCounts != null && i < slotCounts.Length && slotCounts[i] != null)
             {
@@ -209,7 +309,7 @@ public class InventoryManager : MonoBehaviour
             if (slotCounts != null && slotIndex < slotCounts.Length && slotCounts[slotIndex] != null)
             {
                 slotCounts[slotIndex].enabled = true;
-                slotCounts[slotIndex].text = item.Label;
+                slotCounts[slotIndex].text = item.Count > 1 ? $"{item.Label} {item.Count}x" : item.Label;
             }
 
             slotIndex++;

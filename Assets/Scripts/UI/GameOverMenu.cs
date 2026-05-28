@@ -69,7 +69,13 @@ public class GameOverMenu : MonoBehaviour
         Cursor.visible = false;
 
         if (SaveSystem.Instance != null)
+        {
             SaveSystem.Instance.DeleteSave();
+        }
+        else
+        {
+            SaveSystem.ClearSavedData();
+        }
 
         SceneManager.LoadScene("Level01_Entrance");
     }

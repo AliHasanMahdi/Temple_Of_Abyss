@@ -202,6 +202,14 @@ public class SaveSystem : MonoBehaviour
 
     public void DeleteSave()
     {
+        ClearSavedData();
+
+        _pendingUnlockedDoors.Clear();
+        _pendingPickedUpKeys.Clear();
+    }
+
+    public static void ClearSavedData()
+    {
         PlayerPrefs.DeleteKey("SavedScene");
         PlayerPrefs.DeleteKey("SavedLevelName");
         PlayerPrefs.DeleteKey("SavedScore");
@@ -213,14 +221,13 @@ public class SaveSystem : MonoBehaviour
 
         PlayerPrefs.DeleteKey("KeyPickedUp_Key_01");
         PlayerPrefs.DeleteKey("KeyPickedUp_Key_02");
+        PlayerPrefs.DeleteKey("KeyPickedUp_Key_03");
+        PlayerPrefs.DeleteKey("KeyPickedUp_Key_04");
         PlayerPrefs.DeleteKey("Door_Door_01");
         PlayerPrefs.DeleteKey("Door_Door_02");
         PlayerPrefs.DeleteKey("Door_Door_03");
         PlayerPrefs.DeleteKey("CoinsCollected");
         PlayerPrefs.Save();
-
-        _pendingUnlockedDoors.Clear();
-        _pendingPickedUpKeys.Clear();
     }
 
     public bool HasSave()
