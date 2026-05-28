@@ -6,6 +6,7 @@ public class Level04VaultCodePuzzle : MonoBehaviour
 {
     [SerializeField] TMP_Text[] slotTexts = new TMP_Text[5];
     [SerializeField] GameObject treasureChestObject;
+    [SerializeField] GameObject releasedDoorKeyObject;
     [SerializeField] Level04VaultPuzzleInteractable submitInteractable;
     [SerializeField] AudioClip solvedSound;
     [SerializeField] Vector3 solvedChestPosition = new Vector3(-6.656023f, 9.354f, -18.86613f);
@@ -84,6 +85,7 @@ public class Level04VaultCodePuzzle : MonoBehaviour
         isSolved = true;
         PlaySolvedSound();
         TeleportTreasureChest();
+        ReleaseDoorKey();
         DisableSubmitInteraction();
 
         if (HUDManager.Instance != null)
@@ -181,6 +183,29 @@ public class Level04VaultCodePuzzle : MonoBehaviour
             return;
 
         TempleAudio.PlaySfx(solvedSound, 0.9f);
+    }
+
+    void ReleaseDoorKey()
+    {
+        if (releasedDoorKeyObject == null)
+            return;
+
+        releasedDoorKeyObject.transform.SetParent(null, true);
+
+        Collider collider = releasedDoorKeyObject.GetComponent<Collider>();
+        if (collider != null)
+            collider.isTrigger = false;
+
+        Rigidbody body = releasedDoorKeyObject.GetComponent<Rigidbody>();
+        if (body == null)
+            body = releasedDoorKeyObject.AddComponent<Rigidbody>();
+
+        body.isKinematic = false;
+        body.useGravity = true;
+        body.linearVelocity = Vector3.zero;
+        body.angularVelocity = Vector3.zero;
+        body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        body.WakeUp();
     }
 
     bool IsValidSlot(int slotIndex)

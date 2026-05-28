@@ -45,6 +45,21 @@ Approximate time: 0.5 hours
 
 Added the `BullsAndCowsGame` helper with five-slot unique number generation, per-position guess result evaluation, and simple increment/decrement helpers for future puzzle or minigame use.
 
+## Level 4 Bulls And Cows Puzzle Integration
+Approximate time: 3.0 hours
+
+Integrated the Bulls and Cows system into `Level04_Vault` using real scene controls for increase, decrease, and submit. Added remembered digit-color feedback, solved audio, submit disable on success, and puzzle-driven release behavior for a dropped key.
+
+## Level 4 Lever Sequence Puzzle
+Approximate time: 1.5 hours
+
+Implemented a lever-based Level 4 puzzle that generates a random true/false sequence across the lever set, guarantees at least one `true`, prints the sequence to the console for debugging, and releases `Wall_A (78)` plus a dropped key when the lever states match.
+
+## Level 4 Unique Door-Key Progression
+Approximate time: 2.0 hours
+
+Finished the Level 4 progression wiring so the exit-side door and the two dropped-key doors use the shared interaction path correctly. The two puzzle reward doors now use distinct key-door IDs, `Door_092/Key_092` and `Door_095/Key_095`, so each dropped key is tied to its own door only.
+
 ## Main Menu UI Cleanup
 Approximate time: 0.5 hours
 
@@ -57,4 +72,4 @@ Scene placement, balancing, and testing for the new Level 4 power-up pickups are
 
 ## Total Approximate Time
 5.5 hours completed in Sprint 4
-5.5 hours completed in Sprint 7 follow-up tasks
+12.0 hours completed in Sprint 7 follow-up tasks

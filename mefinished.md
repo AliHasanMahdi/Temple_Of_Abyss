@@ -40,6 +40,22 @@
   Approximate time: 0.5 hours
   Added a runtime fallback in `MainMenu` so missing center/menu button graphics no longer appear as a large white box and the main menu stays usable while UI art references are unstable.
 
+- Level 4 Bulls And Cows Scene Puzzle
+  Approximate time: 3.0 hours
+  Integrated the Bulls and Cows helper into `Level04_Vault` with real scene controls for increment, decrement, and submit. Added remembered color states per slot value, solved feedback audio, submit disable on success, and treasure/key release behavior tied to puzzle completion.
+
+- Level 4 Exit Door And HUD Wiring
+  Approximate time: 1.0 hour
+  Wired the Level 4 exit door into the shared interaction flow so it can show a `Press E ...` prompt and move the player to `Level05_Chamber`. Also connected the Level 4 scene to the shared HUD and prompt setup needed by the existing gameplay UI path.
+
+- Level 4 Lever Sequence Puzzle
+  Approximate time: 1.5 hours
+  Added a dedicated Level 4 lever puzzle that generates a true/false sequence of five levers, guarantees it is not all false, prints the sequence to the console for debug, and unlocks a falling wall plus a dropped key when the lever states match.
+
+- Level 4 Unique Door-Key Pairs
+  Approximate time: 1.0 hour
+  Separated the two Level 4 dropped-key door pairs so they use distinct save and unlock IDs: `Door_092/Key_092` and `Door_095/Key_095`. Also renamed the released key objects in the scene to match those unique IDs.
+
 ## Total Approximate Time
 
-14.0 hours
+20.5 hours

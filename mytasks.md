@@ -5,6 +5,8 @@ Approximate time remaining: 12.0+ hours
 
 - Place and test the new `Level04_Vault` power-up pickups using `PowerUpPickup` for `DoubleJump` and `SpeedBoost`
 - Hook those pickups into the actual `Level04_Vault` scene layout and balance their values
+- Verify the final in-editor setup for the Level 4 Bulls and Cows puzzle, lever sequence puzzle, dropped door keys, and shared HUD/interact prompt flow
+- Test the unique Level 4 key-door pairs end to end so `Door_092/Key_092` and `Door_095/Key_095` unlock only their own doors
 - Continue Level 5 scene completion work across Sprint 5 to Sprint 8 items below
 - Finish full scene-level verification for inventory, keys, checkpoints, hazards, and UI feedback after the recent branch merge
 
@@ -16,6 +18,9 @@ Approximate time: 5.0 hours
 - Added the reusable power-up framework for instant collectible pickups with `DoubleJump` uses and `SpeedBoost` duration support
 - Added the `BullsAndCowsGame` helper script with number generation, guess evaluation, and increment/decrement helpers
 - Removed the wall pass-through mechanic from the power-up plan
+- Built the Level 4 Bulls and Cows scene puzzle flow with increment/decrement controls, submit behavior, remembered slot colors, solved audio, and Level 5 exit-door interaction
+- Added the Level 4 lever-sequence puzzle that generates a non-all-false sequence, prints it for debug, releases `Wall_A (78)`, and drops a key when solved
+- Wired the two Level 4 dropped-key door pairs into distinct progression pairs using `Door_092/Key_092` and `Door_095/Key_095`
 
 ## Abyss Vault Core Environment And Layout
 Approximate time: 4.0 hours
