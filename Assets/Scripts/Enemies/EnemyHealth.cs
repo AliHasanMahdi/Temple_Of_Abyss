@@ -56,7 +56,7 @@ public class EnemyHealth : MonoBehaviour
         // Death animation
         LoadDefaultSound();
         if (deathSound != null)
-            AudioSource.PlayClipAtPoint(deathSound, transform.position, deathVolume);
+            AudioSource.PlayClipAtPoint(deathSound, transform.position, TempleAudio.ScaleSfxVolume(deathVolume));
 
         // Death animation
         if (anim != null)

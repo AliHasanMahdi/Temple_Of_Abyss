@@ -1,7 +1,7 @@
-using TMPro;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TMPro;
 
 public class MainMenu : MonoBehaviour
 {
@@ -13,77 +13,34 @@ public class MainMenu : MonoBehaviour
 
     [Header("Load Game Info")]
     public TMP_Text loadGameText;
-    public GameObject settingsPanel;
-
-    void Awake()
-    {
-        EnsureSaveSystemExists();
-        EnsureReferences();
-    }
 
     void Start()
     {
-        Time.timeScale = 1f;
-
+        // Hide HUD when on main menu
         if (HUDManager.Instance != null)
             HUDManager.Instance.ShowHUD(false);
 
-        if (settingsPanel != null)
-            settingsPanel.SetActive(false);
-
         CheckSaveFile();
-        FixMenuGraphics();
 
+        // Connect buttons
         AddButtonListener(newGameButton, NewGame);
         AddButtonListener(loadGameButton, LoadGame);
         AddButtonListener(settingsButton, OpenSettings);
         AddButtonListener(quitButton, QuitGame);
     }
 
-    void EnsureSaveSystemExists()
-    {
-        if (FindFirstObjectByType<SaveSystem>() != null)
-            return;
-
-        new GameObject("SaveSystem").AddComponent<SaveSystem>();
-    }
-
-    void EnsureReferences()
-    {
-        newGameButton ??= FindButton("NewGameButton");
-        loadGameButton ??= FindButton("LoadGameButton");
-        settingsButton ??= FindButton("SettingsButton");
-        quitButton ??= FindButton("QuitButton");
-        settingsPanel ??= GameObject.Find("SettingsPanel");
-
-        if (loadGameText == null && loadGameButton != null)
-            loadGameText = loadGameButton.GetComponentInChildren<TMP_Text>(true);
-    }
-
-    Button FindButton(string objectName)
-    {
-        GameObject target = GameObject.Find(objectName);
-        return target != null ? target.GetComponent<Button>() : null;
-    }
-
     void CheckSaveFile()
     {
         if (PlayerPrefs.HasKey("SavedScene"))
         {
-            if (loadGameButton != null)
-                loadGameButton.interactable = true;
-
+            if (loadGameButton != null) loadGameButton.interactable = true;
             string savedLevel = PlayerPrefs.GetString("SavedLevelName", "Unknown Level");
-            if (loadGameText != null)
-                loadGameText.text = "Continue: " + savedLevel;
+            if (loadGameText != null) loadGameText.text = "Continue: " + savedLevel;
         }
         else
         {
-            if (loadGameButton != null)
-                loadGameButton.interactable = false;
-
-            if (loadGameText != null)
-                loadGameText.text = "No Save Found";
+            if (loadGameButton != null) loadGameButton.interactable = false;
+            if (loadGameText != null) loadGameText.text = "No Save Found";
         }
     }
 
@@ -91,50 +48,34 @@ public class MainMenu : MonoBehaviour
     {
         if (SaveSystem.Instance != null)
             SaveSystem.Instance.DeleteSave();
-        else
-            PlayerPrefs.DeleteKey("SavedScene");
 
+        // Show HUD before entering game
         if (HUDManager.Instance != null)
             HUDManager.Instance.ShowHUD(true);
 
+        // FIXED: correct scene name
         SceneManager.LoadScene("Level01_Entrance");
     }
 
     public void LoadGame()
     {
-        if (!PlayerPrefs.HasKey("SavedScene"))
-            return;
+        if (PlayerPrefs.HasKey("SavedScene"))
+        {
+            PlayerHealth.ShouldRestorePosition = true;
 
-        PlayerHealth.ShouldRestorePosition = true;
+            if (HUDManager.Instance != null)
+                HUDManager.Instance.ShowHUD(true);
 
-        if (HUDManager.Instance != null)
-            HUDManager.Instance.ShowHUD(true);
-
-        SceneManager.LoadScene(PlayerPrefs.GetString("SavedScene"));
+            string sceneToLoad = PlayerPrefs.GetString("SavedScene");
+            SceneManager.LoadScene(sceneToLoad);
+        }
     }
 
     public void OpenSettings()
     {
+        // Works whether SettingsMenu is DontDestroyOnLoad or a panel in this scene
         if (SettingsMenu.Instance != null)
-        {
             SettingsMenu.Instance.Open();
-            return;
-        }
-
-        if (settingsPanel != null)
-            settingsPanel.SetActive(true);
-    }
-
-    public void HideSettings()
-    {
-        if (SettingsMenu.Instance != null)
-        {
-            SettingsMenu.Instance.Close();
-            return;
-        }
-
-        if (settingsPanel != null)
-            settingsPanel.SetActive(false);
     }
 
     public void QuitGame()
@@ -145,57 +86,8 @@ public class MainMenu : MonoBehaviour
 
     void AddButtonListener(Button button, UnityEngine.Events.UnityAction action)
     {
-        if (button == null)
-            return;
-
+        if (button == null) return;
         TempleAudio.RegisterButton(button);
         button.onClick.AddListener(action);
-    }
-
-    void FixMenuGraphics()
-    {
-        NormalizeButtonImage(newGameButton);
-        NormalizeButtonImage(loadGameButton);
-        NormalizeButtonImage(settingsButton);
-        NormalizeButtonImage(quitButton);
-
-        ApplyDecorativeFallback("Panel");
-        ApplyDecorativeFallback("PauseMenuPanel");
-        ApplyDecorativeFallback("SettingsPanel");
-    }
-
-    void NormalizeButtonImage(Button button)
-    {
-        Image image = button != null ? button.targetGraphic as Image : null;
-        if (image == null || image.sprite != null)
-            return;
-
-        image.color = new Color(0.23f, 0.16f, 0.1f, 0.92f);
-        image.type = Image.Type.Simple;
-    }
-
-    void ApplyDecorativeFallback(string rootName)
-    {
-        GameObject root = rootName == "SettingsPanel" ? settingsPanel : GameObject.Find(rootName);
-        if (root == null)
-            return;
-
-        foreach (Image image in root.GetComponentsInChildren<Image>(true))
-        {
-            if (image == null || image.gameObject.name != "Image")
-                continue;
-
-            RectTransform rect = image.rectTransform;
-            if (rect == null)
-                continue;
-
-            if (rect.sizeDelta.x < 150f || rect.sizeDelta.y < 150f)
-                continue;
-
-            image.sprite = null;
-            image.type = Image.Type.Simple;
-            image.color = new Color(0.11f, 0.09f, 0.07f, 0.88f);
-            image.raycastTarget = false;
-        }
     }
 }

@@ -1,6 +1,5 @@
-using System.Collections;
+ï»¿using System.Collections;
 using UnityEngine;
-
 
 public class LeverSpikeTarget : MonoBehaviour
 {
@@ -18,34 +17,49 @@ public class LeverSpikeTarget : MonoBehaviour
     [Tooltip("Speed at which spikes rise and fall (units/sec).")]
     public float moveSpeed = 4f;
 
-    // „Ÿ„Ÿ internal „Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ
-    private Vector3 _downPos;
-    private Vector3 _upPos;
-    private bool _isUp = false;
-    private bool _moving = false;
+    [Header("Sounds")]
+    [Tooltip("Sound played when raised spikes hit an enemy.")]
+    public AudioClip enemyHitSound;
+
+    [Range(0f, 1f)]
+    public float enemyHitVolume = 1f;
+
+    [Tooltip("Spike hit sound only plays when the player is this close.")]
+    public float hitSoundAudibleDistance = 18f;
+
+    public bool playBackup2DSound = true;
+
+    public AudioSource spikeAudioSource;
+
+    private Vector3 downPos;
+    private Vector3 upPos;
+    private bool isUp = false;
+    private bool moving = false;
 
     void Start()
     {
-        _downPos = transform.position;
-        _upPos = new Vector3(transform.position.x,
-                               transform.position.y + riseHeight,
-                               transform.position.z);
+        downPos = transform.position;
+        upPos = new Vector3(transform.position.x,
+                            transform.position.y + riseHeight,
+                            transform.position.z);
+
+        ConfigureAudioSource();
+        if (enemyHitSound == null)
+            enemyHitSound = TempleAudio.LoadClip("TempleAudio/SFX/sword-slash");
     }
 
-    // „Ÿ„Ÿ Called by AN_Button each time the lever is pulled „Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ
     public void Activate()
     {
-        if (_moving) return;
-        if (!_isUp)
-            StartCoroutine(MoveToPos(_upPos, up: true));
+        if (moving) return;
+        if (!isUp)
+            StartCoroutine(MoveToPos(upPos, up: true));
         else
-            StartCoroutine(MoveToPos(_downPos, up: false));
+            StartCoroutine(MoveToPos(downPos, up: false));
     }
 
-    // „Ÿ„Ÿ Movement coroutine „Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ
     IEnumerator MoveToPos(Vector3 target, bool up)
     {
-        _moving = true;
+        moving = true;
 
         while (transform.position != target)
         {
@@ -54,15 +68,13 @@ public class LeverSpikeTarget : MonoBehaviour
             yield return null;
         }
 
-        _isUp = up;
-        _moving = false;
+        isUp = up;
+        moving = false;
     }
 
-    // „Ÿ„Ÿ Damage enemies on contact (works while rising AND while fully up) „Ÿ„Ÿ„Ÿ„Ÿ
     void OnTriggerEnter(Collider other)
     {
-
-        if (!_isUp && !_moving) return;
+        if (!isUp && !moving) return;
 
         EnemyHealth eh = other.GetComponent<EnemyHealth>()
                       ?? other.GetComponentInParent<EnemyHealth>()
@@ -72,14 +84,46 @@ public class LeverSpikeTarget : MonoBehaviour
         {
             float dmg = instantKill ? eh.maxHealth * 2f : damage;
             eh.TakeDamage(dmg);
+            PlayEnemyHitSound();
             Debug.Log("[LeverSpikeTarget] Hit " + other.name + " for " + dmg + " dmg.");
         }
     }
 
-    // „Ÿ„Ÿ Scene view helper „Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ
+    void ConfigureAudioSource()
+    {
+        if (spikeAudioSource == null)
+            spikeAudioSource = GetComponent<AudioSource>();
+        if (spikeAudioSource == null)
+            spikeAudioSource = gameObject.AddComponent<AudioSource>();
+
+        spikeAudioSource.spatialBlend = 1f;
+        spikeAudioSource.rolloffMode = AudioRolloffMode.Linear;
+        spikeAudioSource.minDistance = 1f;
+        spikeAudioSource.maxDistance = hitSoundAudibleDistance;
+        spikeAudioSource.volume = 1f;
+        spikeAudioSource.playOnAwake = false;
+        spikeAudioSource.ignoreListenerPause = true;
+    }
+
+    void PlayEnemyHitSound()
+    {
+        if (enemyHitSound == null || spikeAudioSource == null) return;
+
+        Transform listener = Camera.main != null ? Camera.main.transform : null;
+        if (listener != null && Vector3.Distance(transform.position, listener.position) > hitSoundAudibleDistance)
+            return;
+
+        float pitch = Random.Range(0.95f, 1.05f);
+        spikeAudioSource.pitch = pitch;
+        spikeAudioSource.PlayOneShot(enemyHitSound, TempleAudio.ScaleSfxVolume(enemyHitVolume));
+
+        if (playBackup2DSound)
+            TempleAudio.PlaySfx(enemyHitSound, enemyHitVolume);
+    }
+
     void OnDrawGizmosSelected()
     {
-        Vector3 up = Application.isPlaying ? _upPos
+        Vector3 up = Application.isPlaying ? upPos
                    : new Vector3(transform.position.x,
                                  transform.position.y + riseHeight,
                                  transform.position.z);

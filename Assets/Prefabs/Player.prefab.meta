@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<<< HEAD:Assets/Prefabs/Checkpoint 1.prefab.meta
+guid: 45777845d86ab3c48ade3fb6485b4f1c
+========
 guid: b8278127268cca4499b8d3b6b71daaec
+>>>>>>>> origin/Ali3:Assets/Prefabs/Player.prefab.meta
 PrefabImporter:
   externalObjects: {}
   userData: 

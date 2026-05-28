@@ -1,6 +1,10 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+<<<<<<<< HEAD:Assets/Cell.prefab
+--- !u!1 &2929230676665660219
+========
 --- !u!1 &1707422015122815803
+>>>>>>>> origin/Ali3:Assets/Prefabs/Spear.prefab
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,6 +12,16 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
+<<<<<<<< HEAD:Assets/Cell.prefab
+  - component: {fileID: 6829607243434779341}
+  - component: {fileID: 8780041314397061541}
+  - component: {fileID: 7700232257916171500}
+  - component: {fileID: 6572565811921594914}
+  - component: {fileID: -6800961863185764905}
+  m_Layer: 0
+  m_Name: Cell
+  m_TagString: InventoryCell
+========
   - component: {fileID: 2481146625410097085}
   - component: {fileID: 7050855617000681300}
   - component: {fileID: 7519644453352016622}
@@ -15,40 +29,67 @@ GameObject:
   m_Layer: 0
   m_Name: Spear
   m_TagString: Untagged
+>>>>>>>> origin/Ali3:Assets/Prefabs/Spear.prefab
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+<<<<<<<< HEAD:Assets/Cell.prefab
+--- !u!4 &6829607243434779341
+========
 --- !u!4 &2481146625410097085
+>>>>>>>> origin/Ali3:Assets/Prefabs/Spear.prefab
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
+<<<<<<<< HEAD:Assets/Cell.prefab
+  m_GameObject: {fileID: 2929230676665660219}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.45, y: 2.46, z: -5.99}
+  m_LocalScale: {x: 0.9, y: 0.9, z: 0.1}
+========
   m_GameObject: {fileID: 1707422015122815803}
   serializedVersion: 2
   m_LocalRotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
   m_LocalPosition: {x: 0, y: -0.000000006235843, z: -0.679}
   m_LocalScale: {x: 1, y: 1, z: 1}
+>>>>>>>> origin/Ali3:Assets/Prefabs/Spear.prefab
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+<<<<<<<< HEAD:Assets/Cell.prefab
+--- !u!33 &8780041314397061541
+========
 --- !u!33 &7050855617000681300
+>>>>>>>> origin/Ali3:Assets/Prefabs/Spear.prefab
 MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
+<<<<<<<< HEAD:Assets/Cell.prefab
+  m_GameObject: {fileID: 2929230676665660219}
+  m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!23 &7700232257916171500
+========
   m_GameObject: {fileID: 1707422015122815803}
   m_Mesh: {fileID: -2463990636847736144, guid: 679578e58331c4b49afa591933b452f8, type: 3}
 --- !u!23 &7519644453352016622
+>>>>>>>> origin/Ali3:Assets/Prefabs/Spear.prefab
 MeshRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
+<<<<<<<< HEAD:Assets/Cell.prefab
+  m_GameObject: {fileID: 2929230676665660219}
+========
   m_GameObject: {fileID: 1707422015122815803}
+>>>>>>>> origin/Ali3:Assets/Prefabs/Spear.prefab
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
@@ -62,10 +103,16 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
+<<<<<<<< HEAD:Assets/Cell.prefab
+  - {fileID: 2100000, guid: 793b8dfe908323f4bbabda1969241265, type: 2}
+========
   - {fileID: 2100000, guid: dede631811aebab4890cdcb8884a92eb, type: 2}
+>>>>>>>> origin/Ali3:Assets/Prefabs/Spear.prefab
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -83,17 +130,28 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+<<<<<<<< HEAD:Assets/Cell.prefab
+--- !u!65 &6572565811921594914
+BoxCollider:
+========
 --- !u!136 &6513843525489441524
 CapsuleCollider:
+>>>>>>>> origin/Ali3:Assets/Prefabs/Spear.prefab
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
+<<<<<<<< HEAD:Assets/Cell.prefab
+  m_GameObject: {fileID: 2929230676665660219}
+========
   m_GameObject: {fileID: 1707422015122815803}
+>>>>>>>> origin/Ali3:Assets/Prefabs/Spear.prefab
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -105,8 +163,27 @@ CapsuleCollider:
   m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
+<<<<<<<< HEAD:Assets/Cell.prefab
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &-6800961863185764905
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2929230676665660219}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4831c434d79a93940977da0b0e9adf64, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CellTrigger
+  isOccupied: 0
+========
   serializedVersion: 2
   m_Radius: 0.026132999
   m_Height: 0.8459349
   m_Direction: 1
   m_Center: {x: 0, y: -0.11085287, z: 9.313201e-10}
+>>>>>>>> origin/Ali3:Assets/Prefabs/Spear.prefab

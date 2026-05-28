@@ -67,6 +67,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   damage: 50
+  enemyHitSound: {fileID: 8300000, guid: 9fe12b42fe521f446ae5951052f7c185, type: 3}
+  enemyHitVolume: 1
+  hitSoundAudibleDistance: 18
+  playBackup2DSound: 1
+  spikeAudioSource: {fileID: 0}
 --- !u!1001 &1062814070951625547
 PrefabInstance:
   m_ObjectHideFlags: 0

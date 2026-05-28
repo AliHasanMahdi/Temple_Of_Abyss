@@ -1,8 +1,8 @@
-using System.Collections;
-using TMPro;
-using UnityEngine;
-using UnityEngine.SceneManagement;
+﻿using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
+using System.Collections;
+using UnityEngine.SceneManagement;
 
 public class HUDManager : MonoBehaviour
 {
@@ -24,9 +24,9 @@ public class HUDManager : MonoBehaviour
     public TMP_Text interactPromptText;
     public GameObject interactBackground;
 
-    int score;
-    Coroutine messageCoroutine;
-    bool hudVisible = true;
+    private int score = 0;
+    private Coroutine messageCoroutine;
+    private bool hudVisible = true;
 
     void Awake()
     {
@@ -38,28 +38,19 @@ public class HUDManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
-        AutoBindAll();
+        AutoBindHealthBar();
+        AutoBindScoreImage();
     }
 
     void Start()
     {
-        AutoBindAll();
-        ApplyScoreText();
-
-        if (interactPromptText != null)
-            interactPromptText.gameObject.SetActive(false);
-
-        if (interactBackground != null)
-            interactBackground.SetActive(false);
-
-        if (checkpointText != null)
-            checkpointText.gameObject.SetActive(false);
-
-        if (messageBackground != null)
-            messageBackground.SetActive(false);
-
-        string sceneName = SceneManager.GetActiveScene().name;
-        ShowHUD(sceneName != "MainMenu" && sceneName != "GameOver");
+        AutoBindHealthBar();
+        AutoBindScoreImage();
+        if (interactPromptText != null) interactPromptText.gameObject.SetActive(false);
+        if (interactBackground != null) interactBackground.SetActive(false);
+        if (checkpointText != null) checkpointText.gameObject.SetActive(false);
+        if (messageBackground != null) messageBackground.SetActive(false);
+        ShowHUD(SceneManager.GetActiveScene().name != "MainMenu");
     }
 
     void OnEnable()
@@ -74,11 +65,11 @@ public class HUDManager : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        AutoBindAll();
-        ApplyScoreText();
-        ShowHUD(scene.name != "MainMenu" && scene.name != "GameOver");
+        AutoBindHealthBar();
+        AutoBindScoreImage();
+        ShowHUD(scene.name != "MainMenu");
 
-        PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+        PlayerHealth playerHealth = FindObjectOfType<PlayerHealth>();
         if (playerHealth != null)
             UpdateHealth(playerHealth.currentHealth, playerHealth.maxHealth);
     }
@@ -94,12 +85,8 @@ public class HUDManager : MonoBehaviour
 
         if (!show)
         {
-            if (checkpointText != null)
-                checkpointText.gameObject.SetActive(false);
-
-            if (messageBackground != null)
-                messageBackground.SetActive(false);
-
+            if (checkpointText != null) checkpointText.gameObject.SetActive(false);
+            if (messageBackground != null) messageBackground.SetActive(false);
             HideInteractPrompt();
         }
     }
@@ -107,13 +94,10 @@ public class HUDManager : MonoBehaviour
     public void UpdateHealth(float current, float max)
     {
         AutoBindHealthBar();
-        if (max <= 0f)
-            return;
+        if (max <= 0f) return;
 
         float ratio = Mathf.Clamp01(current / max);
-        if (hpFill != null)
-            hpFill.fillAmount = ratio;
-
+        if (hpFill != null) hpFill.fillAmount = ratio;
         if (healthBar != null)
         {
             healthBar.maxValue = 1f;
@@ -124,50 +108,29 @@ public class HUDManager : MonoBehaviour
     public void AddScore(int amount)
     {
         score += amount;
-        ApplyScoreText();
+        if (scoreText != null)
+            scoreText.text = "Score: " + score;
     }
 
-    public int GetScore()
-    {
-        return score;
-    }
+    public int GetScore() { return score; }
 
     public void SetScore(int value)
     {
         score = value;
-        ApplyScoreText();
+        if (scoreText != null)
+            scoreText.text = "Score: " + score;
     }
 
     public void ShowInteractPrompt(string message)
     {
-        AutoBindPrompt();
-        if (interactPromptText != null)
-        {
-            interactPromptText.text = message;
-            interactPromptText.gameObject.SetActive(!string.IsNullOrEmpty(message) && hudVisible);
-        }
-
-        if (interactBackground != null)
-            interactBackground.SetActive(!string.IsNullOrEmpty(message) && hudVisible);
+        if (interactPromptText != null) { interactPromptText.text = message; interactPromptText.gameObject.SetActive(true); }
+        if (interactBackground != null) interactBackground.SetActive(true);
     }
 
     public void HideInteractPrompt()
     {
-        if (interactPromptText != null)
-            interactPromptText.gameObject.SetActive(false);
-
-        if (interactBackground != null)
-            interactBackground.SetActive(false);
-    }
-
-    public void ShowInteractionPrompt(string prompt)
-    {
-        ShowInteractPrompt(prompt);
-    }
-
-    public void HideInteractionPrompt()
-    {
-        HideInteractPrompt();
+        if (interactPromptText != null) interactPromptText.gameObject.SetActive(false);
+        if (interactBackground != null) interactBackground.SetActive(false);
     }
 
     public void ShowCheckpointMessage()
@@ -182,53 +145,29 @@ public class HUDManager : MonoBehaviour
 
     public void ShowTimedMessage(string message, float duration)
     {
-        AutoBindMessages();
-        if (checkpointText == null || !hudVisible)
-            return;
-
-        if (messageCoroutine != null)
-            StopCoroutine(messageCoroutine);
-
+        if (checkpointText == null) return;
+        if (messageCoroutine != null) StopCoroutine(messageCoroutine);
         messageCoroutine = StartCoroutine(MessageRoutine(message, duration));
     }
 
     IEnumerator MessageRoutine(string message, float duration)
     {
+        if (!hudVisible) yield break;
+
         checkpointText.text = message;
         checkpointText.gameObject.SetActive(true);
-
-        if (messageBackground != null)
-            messageBackground.SetActive(true);
-
+        if (messageBackground != null) messageBackground.SetActive(true);
         yield return new WaitForSeconds(duration);
-
         checkpointText.gameObject.SetActive(false);
-        if (messageBackground != null)
-            messageBackground.SetActive(false);
-
+        if (messageBackground != null) messageBackground.SetActive(false);
         messageCoroutine = null;
-    }
-
-    void ApplyScoreText()
-    {
-        AutoBindScoreRefs();
-        if (scoreText != null)
-            scoreText.text = "Score: " + score;
-    }
-
-    void AutoBindAll()
-    {
-        AutoBindHealthBar();
-        AutoBindScoreRefs();
-        AutoBindMessages();
-        AutoBindPrompt();
     }
 
     void AutoBindHealthBar()
     {
         if (healthBar == null)
         {
-            Slider[] sliders = FindObjectsByType<Slider>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            Slider[] sliders = FindObjectsOfType<Slider>(true);
             foreach (Slider slider in sliders)
             {
                 if (slider.name == "HealthBar" || slider.name.Contains("Health"))
@@ -239,12 +178,9 @@ public class HUDManager : MonoBehaviour
             }
         }
 
-        if (hpFill == null && healthBar != null && healthBar.fillRect != null)
-            hpFill = healthBar.fillRect.GetComponent<Image>();
-
         if (hpFill == null)
         {
-            Image[] images = FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            Image[] images = FindObjectsOfType<Image>(true);
             foreach (Image image in images)
             {
                 if (image.name == "Hp_Fill" || image.name == "HP_Fill" || image.name == "HealthFill")
@@ -254,80 +190,23 @@ public class HUDManager : MonoBehaviour
                 }
             }
         }
+
+        if (hpFill == null && healthBar != null && healthBar.fillRect != null)
+            hpFill = healthBar.fillRect.GetComponent<Image>();
     }
 
-    void AutoBindScoreRefs()
+    void AutoBindScoreImage()
     {
-        if (scoreText == null)
+        if (scoreImage != null) return;
+
+        Image[] images = FindObjectsOfType<Image>(true);
+        foreach (Image image in images)
         {
-            TMP_Text[] texts = FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            foreach (TMP_Text text in texts)
+            if (image.name == "ScoreImage")
             {
-                if (text.name == "ScoreText")
-                {
-                    scoreText = text;
-                    break;
-                }
+                scoreImage = image;
+                break;
             }
-        }
-
-        if (scoreImage == null)
-        {
-            Image[] images = FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            foreach (Image image in images)
-            {
-                if (image.name == "ScoreImage")
-                {
-                    scoreImage = image;
-                    break;
-                }
-            }
-        }
-    }
-
-    void AutoBindMessages()
-    {
-        if (checkpointText == null)
-        {
-            TMP_Text[] texts = FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            foreach (TMP_Text text in texts)
-            {
-                if (text.name == "CheckpointText")
-                {
-                    checkpointText = text;
-                    break;
-                }
-            }
-        }
-
-        if (messageBackground == null)
-        {
-            GameObject found = GameObject.Find("MessageBackground");
-            if (found != null)
-                messageBackground = found;
-        }
-    }
-
-    void AutoBindPrompt()
-    {
-        if (interactPromptText == null)
-        {
-            TMP_Text[] texts = FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            foreach (TMP_Text text in texts)
-            {
-                if (text.name == "InteractionPromptText" || text.name == "InteractPromptText")
-                {
-                    interactPromptText = text;
-                    break;
-                }
-            }
-        }
-
-        if (interactBackground == null)
-        {
-            GameObject found = GameObject.Find("InteractBackground");
-            if (found != null)
-                interactBackground = found;
         }
     }
 

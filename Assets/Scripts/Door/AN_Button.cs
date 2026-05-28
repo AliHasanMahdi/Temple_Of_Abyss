@@ -1,6 +1,6 @@
-using UnityEngine;
+﻿using UnityEngine;
 
-public class AN_Button : MonoBehaviour, IPlayerInteractable
+public class AN_Button : MonoBehaviour
 {
     [Tooltip("True for rotation like valve (used for ramp/elevator only)")]
     public bool isValve = false;
@@ -27,28 +27,25 @@ public class AN_Button : MonoBehaviour, IPlayerInteractable
     public bool CanClose = true;
     [Tooltip("Current status of the door")]
     public bool isOpened = false;
-
-    [Header("Interaction")]
-    public float interactionDistance = 2f;
-
     [Space]
     [Tooltip("True for rotation by X local rotation by valve")]
     public bool xRotation = true;
     [Tooltip("True for vertical movenment by valve (if xRotation is false)")]
     public bool yPosition = false;
     public float max = 90f, min = 0f, speed = 5f;
-
     bool valveBool = true;
-    float current;
-    float startYPosition;
-    Quaternion startQuat;
-    Quaternion rampQuat;
+    float current, startYPosition;
+    Quaternion startQuat, rampQuat;
 
     Animator anim;
     AudioSource audioSource;
-    AudioClip buttonSound;
-    AudioClip leverSound;
+    [Header("Interaction Sounds")]
+    [SerializeField] AudioClip buttonSound;
+    [SerializeField] AudioClip leverSound;
+    [Range(0f, 1f)]
+    public float interactionVolume = 0.75f;
 
+    // NearView()
     float distance;
     float angleView;
     Vector3 direction;
@@ -60,21 +57,16 @@ public class AN_Button : MonoBehaviour, IPlayerInteractable
         if (audioSource == null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.spatialBlend = 1f;
-            audioSource.rolloffMode = AudioRolloffMode.Linear;
-            audioSource.minDistance = 1f;
-            audioSource.maxDistance = 12f;
-            audioSource.playOnAwake = false;
+            ConfigureAudioSource();
         }
         else
         {
-            audioSource.maxDistance = Mathf.Max(audioSource.maxDistance, 12f);
+            ConfigureAudioSource();
         }
 
         LoadDefaultSound();
         if (RampObject != null)
             startYPosition = RampObject.position.y;
-
         startQuat = transform.rotation;
         if (RampObject != null)
             rampQuat = RampObject.rotation;
@@ -82,117 +74,90 @@ public class AN_Button : MonoBehaviour, IPlayerInteractable
 
     void Update()
     {
-        if (Locked || !isValve || RampObject == null)
-            return;
-
-        if (Input.GetKey(KeyCode.E) && NearView())
+        if (!Locked)
         {
-            if (!audioSource.isPlaying)
+            if (Input.GetKeyDown(KeyCode.E) && !isValve && NearView()) // 1.lever and 2.button
+            {
                 PlayButtonSound();
 
-            if (valveBool)
-            {
-                if (!isOpened && CanOpen && current < max) current += speed * Time.deltaTime;
-                if (isOpened && CanClose && current > min) current -= speed * Time.deltaTime;
-
-                if (current >= max)
+                // Door logic (still works if DoorObject is assigned)
+                if (DoorObject != null && DoorObject.Remote)
                 {
-                    isOpened = true;
-                    valveBool = false;
+                    DoorObject.Action();
+                    if (isLever)
+                    {
+                        if (DoorObject.isOpened) anim.SetBool("LeverUp", true);
+                        else anim.SetBool("LeverUp", false);
+                    }
+                    else anim.SetTrigger("ButtonPress");
                 }
-                else if (current <= min)
+                else if (isLever)
                 {
-                    isOpened = false;
-                    valveBool = false;
+                    // No door assigned — just animate the lever toggle
+                    anim.SetBool("LeverUp", !anim.GetBool("LeverUp"));
+                }
+                else
+                {
+                    anim.SetTrigger("ButtonPress");
+                }
+
+                // Fire all connected spike traps
+                if (spikeTargets != null)
+                {
+                    foreach (LeverSpikeTarget spike in spikeTargets)
+                    {
+                        if (spike != null) spike.Activate();
+                    }
                 }
             }
-        }
-        else
-        {
-            if (!isOpened && current > min) current -= speed * Time.deltaTime;
-            if (isOpened && current < max) current += speed * Time.deltaTime;
-            valveBool = true;
-        }
+            else if (isValve && RampObject != null) // 3.valve
+            {
+                // changing value in script
+                if (Input.GetKey(KeyCode.E) && NearView())
+                {
+                    if (!audioSource.isPlaying)
+                        PlayButtonSound();
 
-        transform.rotation = startQuat * Quaternion.Euler(0f, 0f, current * ValveSpeed);
-        if (xRotation)
-            RampObject.rotation = rampQuat * Quaternion.Euler(current, 0f, 0f);
-        else if (yPosition)
-            RampObject.position = new Vector3(RampObject.position.x, startYPosition + current, RampObject.position.z);
-    }
+                    if (valveBool)
+                    {
+                        if (!isOpened && CanOpen && current < max) current += speed * Time.deltaTime;
+                        if (isOpened && CanClose && current > min) current -= speed * Time.deltaTime;
 
-    public bool CanInteract(GameObject interactor)
-    {
-        return !Locked && !isValve && enabled && gameObject.activeInHierarchy && IsWithinRange(interactor);
-    }
+                        if (current >= max)
+                        {
+                            isOpened = true;
+                            valveBool = false;
+                        }
+                        else if (current <= min)
+                        {
+                            isOpened = false;
+                            valveBool = false;
+                        }
+                    }
 
-    public string GetPromptText()
-    {
-        return isLever ? "Press E to use lever" : "Press E to press button";
-    }
+                }
+                else
+                {
+                    if (!isOpened && current > min) current -= speed * Time.deltaTime;
+                    if (isOpened && current < max) current += speed * Time.deltaTime;
+                    valveBool = true;
+                }
 
-    public void Interact(GameObject interactor)
-    {
-        if (!CanInteract(interactor))
-            return;
-
-        ActivateButton();
-    }
-
-    void ActivateButton()
-    {
-        PlayButtonSound();
-
-        if (DoorObject != null && DoorObject.Remote)
-        {
-            DoorObject.Action();
-            if (isLever && anim != null)
-                anim.SetBool("LeverUp", DoorObject.isOpened);
-            else if (anim != null)
-                anim.SetTrigger("ButtonPress");
-        }
-        else if (isLever)
-        {
-            if (anim != null)
-                anim.SetBool("LeverUp", !anim.GetBool("LeverUp"));
-        }
-        else if (anim != null)
-        {
-            anim.SetTrigger("ButtonPress");
-        }
-
-        if (spikeTargets == null)
-            return;
-
-        foreach (LeverSpikeTarget spike in spikeTargets)
-        {
-            if (spike != null)
-                spike.Activate();
+                // using value on object
+                transform.rotation = startQuat * Quaternion.Euler(0f, 0f, current * ValveSpeed);
+                if (xRotation) RampObject.rotation = rampQuat * Quaternion.Euler(current, 0f, 0f);
+                else if (yPosition) RampObject.position = new Vector3(RampObject.position.x, startYPosition + current, RampObject.position.z);
+            }
         }
     }
 
-    bool NearView()
+    bool NearView() // it is true if you near interactive object
     {
-        if (Camera.main == null)
-            return false;
-
         distance = Vector3.Distance(transform.position, Camera.main.transform.position);
         direction = transform.position - Camera.main.transform.position;
         angleView = Vector3.Angle(Camera.main.transform.forward, direction);
-        return angleView < 45f && distance < 2f;
-    }
-
-    bool IsWithinRange(GameObject interactor)
-    {
-        if (interactor == null)
-            return false;
-
-        Transform origin = interactor.transform;
-        PlayerMovement movement = interactor.GetComponent<PlayerMovement>();
-        if (movement != null && movement.ViewTransform != null)
-            origin = movement.ViewTransform;
-
-        return Vector3.Distance(transform.position, origin.position) <= interactionDistance;
+        if (angleView < 45f && distance < 2f) return true;
+        else return false;
     }
 
     void PlayButtonSound()
@@ -203,8 +168,8 @@ public class AN_Button : MonoBehaviour, IPlayerInteractable
         if (audioSource == null || clip == null) return;
 
         audioSource.pitch = Random.Range(0.95f, 1.05f);
-        audioSource.PlayOneShot(clip, 0.75f);
-        TempleAudio.PlaySfx(clip, 0.75f);
+        audioSource.PlayOneShot(clip, TempleAudio.ScaleSfxVolume(interactionVolume));
+        TempleAudio.PlaySfx(clip, interactionVolume);
     }
 
     void LoadDefaultSound()
@@ -213,5 +178,16 @@ public class AN_Button : MonoBehaviour, IPlayerInteractable
             buttonSound = TempleAudio.LoadClip("TempleAudio/SFX/Call Classic Old Lift Elevator Button With Ride 1");
         if (leverSound == null)
             leverSound = TempleAudio.LoadClip("TempleAudio/SFX/clank1");
+    }
+
+    void ConfigureAudioSource()
+    {
+        if (audioSource == null) return;
+
+        audioSource.spatialBlend = 1f;
+        audioSource.rolloffMode = AudioRolloffMode.Linear;
+        audioSource.minDistance = Mathf.Max(audioSource.minDistance, 1f);
+        audioSource.maxDistance = Mathf.Max(audioSource.maxDistance, 12f);
+        audioSource.playOnAwake = false;
     }
 }

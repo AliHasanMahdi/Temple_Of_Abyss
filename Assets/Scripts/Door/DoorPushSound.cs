@@ -88,6 +88,6 @@ public class DoorPushSound : MonoBehaviour
     {
         if (clip == null || audioSource == null) return;
         audioSource.pitch = Random.Range(0.93f, 1.07f);
-        audioSource.PlayOneShot(clip, volume);
+        audioSource.PlayOneShot(clip, TempleAudio.ScaleSfxVolume(volume));
     }
 }

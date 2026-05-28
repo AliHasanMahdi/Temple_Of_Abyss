@@ -131,6 +131,16 @@ public class TempleAudio : MonoBehaviour
             Instance.uiSource.PlayOneShot(clip, Mathf.Clamp01(volume));
     }
 
+    public static float GetSfxVolume()
+    {
+        return Mathf.Clamp01(PlayerPrefs.GetFloat("SFXVolume", 1f));
+    }
+
+    public static float ScaleSfxVolume(float volume)
+    {
+        return Mathf.Clamp01(volume) * GetSfxVolume();
+    }
+
     public static void SetMusicVolume(float volume)
     {
         EnsureInstance();
@@ -156,7 +166,7 @@ public class TempleAudio : MonoBehaviour
 
     void RegisterSceneButtons()
     {
-        foreach (Button button in Object.FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (Button button in FindObjectsOfType<Button>(true))
             RegisterButtonInternal(button);
     }
 

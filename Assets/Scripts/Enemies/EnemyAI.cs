@@ -41,10 +41,10 @@ public class EnemyAI : MonoBehaviour
     public float chaseStepRate = 2.4f;
 
     [Range(0f, 1f)]
-    public float footstepVolume = 0.7f;
+    public float footstepVolume = 0.35f;
 
     [Tooltip("Enemy walk sound only plays when the player is within this distance.")]
-    public float footstepAudibleDistance = 12f;
+    public float footstepAudibleDistance = 7f;
     // ─────────────────────────────────────────────────────────────
 
     private enum State { Patrolling, Chasing, Returning, Dead }
@@ -71,6 +71,8 @@ public class EnemyAI : MonoBehaviour
 
     // Footstep timing
     private float footstepTimer = 0f;
+    const float MaxFootstepAudibleDistance = 7f;
+    const float FootstepVolumeScale = 0.45f;
 
     void Start()
     {
@@ -83,7 +85,12 @@ public class EnemyAI : MonoBehaviour
             enemyCamera = GetComponentInChildren<Camera>();
 
         if (enemyCamera != null)
+        {
             enemyCamera.enabled = false;
+            AudioListener enemyListener = enemyCamera.GetComponent<AudioListener>();
+            if (enemyListener != null)
+                enemyListener.enabled = false;
+        }
 
         if (agent == null)
         {
@@ -98,21 +105,11 @@ public class EnemyAI : MonoBehaviour
         lastPosition = transform.position;
         GoToNextPatrolPoint();
 
-        // Auto-create 3D AudioSource if not assigned
+        // Auto-create/configure 3D AudioSource if not assigned.
         if (footstepAudioSource == null)
-        {
             footstepAudioSource = gameObject.AddComponent<AudioSource>();
-            footstepAudioSource.spatialBlend = 0f;
-            footstepAudioSource.rolloffMode = AudioRolloffMode.Linear;
-            footstepAudioSource.minDistance = 1f;
-            footstepAudioSource.maxDistance = footstepAudibleDistance;
-            footstepAudioSource.playOnAwake = false;
-        }
-        else
-        {
-            footstepAudioSource.spatialBlend = 0f;
-            footstepAudioSource.maxDistance = Mathf.Max(footstepAudioSource.maxDistance, footstepAudibleDistance);
-        }
+
+        ConfigureFootstepAudioSource();
 
         if (!HasPlayableClips(patrolFootstepClips))
             patrolFootstepClips = TempleAudio.LoadClips("TempleAudio/Enemy/freesound_community-rattling-bones-105394");
@@ -351,7 +348,7 @@ public class EnemyAI : MonoBehaviour
 
         PlayerHealth health = player.GetComponent<PlayerHealth>();
         if (health == null) health = player.GetComponentInParent<PlayerHealth>();
-        if (health == null) health = Object.FindAnyObjectByType<PlayerHealth>();
+        if (health == null) health = FindObjectOfType<PlayerHealth>();
 
         if (health != null)
             health.TakeDamage(damage);
@@ -458,7 +455,8 @@ public class EnemyAI : MonoBehaviour
         if (agent == null || footstepAudioSource == null) return;
         if (player == null) return;
 
-        if (Vector3.Distance(transform.position, player.position) > footstepAudibleDistance)
+        float audibleDistance = EffectiveFootstepAudibleDistance();
+        if (Vector3.Distance(transform.position, player.position) > audibleDistance)
         {
             footstepTimer = 0f;
             return;
@@ -495,8 +493,28 @@ public class EnemyAI : MonoBehaviour
             clip = clips[i];
 
         footstepAudioSource.pitch = Random.Range(0.90f, 1.10f);
-        footstepAudioSource.PlayOneShot(clip, footstepVolume);
-        TempleAudio.PlaySfx(clip, footstepVolume);
+        footstepAudioSource.PlayOneShot(clip, EffectiveFootstepVolume());
+    }
+
+    void ConfigureFootstepAudioSource()
+    {
+        if (footstepAudioSource == null) return;
+
+        footstepAudioSource.spatialBlend = 1f;
+        footstepAudioSource.rolloffMode = AudioRolloffMode.Linear;
+        footstepAudioSource.minDistance = 0.5f;
+        footstepAudioSource.maxDistance = EffectiveFootstepAudibleDistance();
+        footstepAudioSource.playOnAwake = false;
+    }
+
+    float EffectiveFootstepAudibleDistance()
+    {
+        return Mathf.Min(footstepAudibleDistance, MaxFootstepAudibleDistance);
+    }
+
+    float EffectiveFootstepVolume()
+    {
+        return TempleAudio.ScaleSfxVolume(footstepVolume * FootstepVolumeScale);
     }
 
     bool HasPlayableClips(AudioClip[] clips)

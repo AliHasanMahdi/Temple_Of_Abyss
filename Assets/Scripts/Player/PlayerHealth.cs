@@ -1,13 +1,16 @@
-using System.Collections;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections;
 
 public class PlayerHealth : MonoBehaviour
 {
     public float maxHealth = 100f;
     public float currentHealth;
 
-    public bool IsDead { get; private set; }
+    [Header("Audio")]
+    public AudioSource playerAudioSource;
+    public AudioClip damageSound;
+
     public static bool ShouldRestorePosition = false;
 
     void Start()
@@ -27,12 +30,10 @@ public class PlayerHealth : MonoBehaviour
         yield return null;
         yield return null;
 
-        string savedScene = PlayerPrefs.GetString("SavedScene", string.Empty);
+        string savedScene = PlayerPrefs.GetString("SavedScene", "");
         string currentScene = SceneManager.GetActiveScene().name;
 
-        if (savedScene != currentScene)
-            yield break;
-
+        if (savedScene != currentScene) yield break;
         if (SaveSystem.Instance != null)
         {
             SaveSystem.Instance.RestorePlayerToSavedPosition(gameObject);
@@ -43,62 +44,55 @@ public class PlayerHealth : MonoBehaviour
                 PlayerPrefs.GetFloat("SavedPosX", transform.position.x),
                 PlayerPrefs.GetFloat("SavedPosY", transform.position.y),
                 PlayerPrefs.GetFloat("SavedPosZ", transform.position.z));
-
             transform.position = SaveSystem.GetSafePlayerPosition(savedPosition, gameObject);
         }
 
         yield return new WaitForFixedUpdate();
         yield return null;
 
+        // Restore score
         int savedScore = PlayerPrefs.GetInt("SavedScore", 0);
         if (HUDManager.Instance != null)
             HUDManager.Instance.SetScore(savedScore);
 
+        // Restore keys
         AN_HeroInteractive hero = GetComponent<AN_HeroInteractive>();
         if (hero != null)
         {
-            int redKeyCount = PlayerPrefs.HasKey("SavedRedKeyCount")
-                ? PlayerPrefs.GetInt("SavedRedKeyCount", 0)
-                : PlayerPrefs.GetInt("SavedRedKey", 0);
-            int blueKeyCount = PlayerPrefs.HasKey("SavedBlueKeyCount")
-                ? PlayerPrefs.GetInt("SavedBlueKeyCount", 0)
-                : PlayerPrefs.GetInt("SavedBlueKey", 0);
-
-            hero.SetKeyCounts(redKeyCount, blueKeyCount);
+            hero.RedKey = PlayerPrefs.GetInt("SavedRedKey", 0) == 1;
+            hero.BlueKey = PlayerPrefs.GetInt("SavedBlueKey", 0) == 1;
         }
+
+        Debug.Log("Restore complete! Can move now.");
     }
 
     public void TakeDamage(float amount)
     {
-        if (IsDead)
-            return;
-
         currentHealth -= amount;
-        currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
-        UpdateHUD();
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
 
-        if (currentHealth <= 0f)
-            StartCoroutine(Die());
+        // Play damage sound
+        if (playerAudioSource != null && damageSound != null)
+        {
+            playerAudioSource.PlayOneShot(damageSound);
+        }
+
+        UpdateHUD();
+        if (currentHealth <= 0) Die();
     }
 
     public void Heal(float amount)
     {
-        if (IsDead)
-            return;
-
         currentHealth += amount;
-        currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
         UpdateHUD();
     }
 
     public void InstantKill()
     {
-        if (IsDead)
-            return;
-
-        currentHealth = 0f;
+        currentHealth = 0;
         UpdateHUD();
-        StartCoroutine(Die());
+        Die();
     }
 
     void UpdateHUD()
@@ -107,23 +101,8 @@ public class PlayerHealth : MonoBehaviour
             HUDManager.Instance.UpdateHealth(currentHealth, maxHealth);
     }
 
-    IEnumerator Die()
+    void Die()
     {
-        if (IsDead)
-            yield break;
-
-        IsDead = true;
-
-        PlayerMovement movement = GetComponent<PlayerMovement>();
-        if (movement != null)
-            movement.enabled = false;
-
-        PlayerInteraction interaction = GetComponent<PlayerInteraction>();
-        if (interaction != null)
-            interaction.enabled = false;
-
-        yield return new WaitForSeconds(1f);
-
         ShouldRestorePosition = false;
         GameOverMenu.ShowDeath(SceneManager.GetActiveScene().name);
         SceneManager.LoadScene("GameOver");
