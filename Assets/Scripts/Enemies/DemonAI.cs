@@ -177,6 +177,39 @@ public class DemonAI : MonoBehaviour
             Debug.Log("Demon hunting triggered externally - warning skipped.");
         }
     }
+    public void ResetDemon()
+    {
+        // Stop all coroutines (jump, etc.)
+        StopAllCoroutines();
+
+        // Reset warning phase
+        isWarning = true;
+        warningTimer = warningDuration;
+        agent.isStopped = true;
+
+        // Reset combat flags
+        isAttacking = false;
+        isJumping = false;
+        nextAttackTime = 0f;
+
+        // Reset memory
+        lastSeenTime = -10f;
+
+        // Reset animation
+        if (anim != null)
+            anim.SetBool("IsRunning", false);
+        // (avoid setting triggers here, they will reset naturally)
+
+        // Force a full reset of the agent's internal state
+        this.enabled = false;
+        this.enabled = true;
+
+        // Re-find player if needed (though it should still be valid)
+        if (player == null)
+            player = GameObject.FindGameObjectWithTag("Player").transform;
+
+        Debug.Log("Demon fully reset.");
+    }
 
     IEnumerator JumpOverLink()
     {
