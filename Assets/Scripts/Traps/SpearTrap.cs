@@ -4,13 +4,16 @@ public class SpearTrap : MonoBehaviour
 {
     [Header("Spear Settings")]
     public GameObject spearPrefab;
-    public float shootInterval = 3f;
-    public float spearSpeed = 15f;
+    // Lower interval = more frequent shooting
+    public float shootInterval = 1.5f;
+    // Lower speed = slower moving spear
+    public float spearSpeed = 8f;
     public float spearDamage = 40f;
     public float spearLifetime = 4f;
 
     [Header("Direction")]
-    public Vector3 shootDirection = Vector3.forward;
+    // Change this to (1, 0, 0) or (-1, 0, 0) for side-shooting
+    public Vector3 shootDirection = new Vector3(1, 0, 0);
 
     [Header("Sound")]
     public AudioClip arrowSound;

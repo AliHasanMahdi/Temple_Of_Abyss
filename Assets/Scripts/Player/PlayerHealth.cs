@@ -7,6 +7,10 @@ public class PlayerHealth : MonoBehaviour
     public float maxHealth = 100f;
     public float currentHealth;
 
+    [Header("Audio")]
+    public AudioSource playerAudioSource;
+    public AudioClip damageSound;
+
     public static bool ShouldRestorePosition = false;
 
     void Start()
@@ -66,6 +70,13 @@ public class PlayerHealth : MonoBehaviour
     {
         currentHealth -= amount;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+
+        // Play damage sound
+        if (playerAudioSource != null && damageSound != null)
+        {
+            playerAudioSource.PlayOneShot(damageSound);
+        }
+
         UpdateHUD();
         if (currentHealth <= 0) Die();
     }
