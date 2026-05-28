@@ -60,11 +60,15 @@ public static class BullsAndCowsGame
 
     public static int Increase(int value)
     {
+        if (value >= 9)
+            return 9;
         return value + 1;
     }
 
     public static int Decrease(int value)
     {
+        if (value <= 0)
+            return 0;
         return value - 1;
     }
 }

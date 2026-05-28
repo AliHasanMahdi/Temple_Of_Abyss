@@ -8,16 +8,28 @@ public static class SceneBootstrapper
     {
         EnsureSaveSystemExists();
 
-        if (SceneManager.GetActiveScene().name != "Level01_Entrance")
-            return;
+        string sceneName = SceneManager.GetActiveScene().name;
 
-        EnsureGround();
-        GameObject player = EnsurePlayer();
-        EnsureHUDManager();
-        TunePlayerController(player);
-        EnsureSandboxGeometry();
-        EnsureSandboxInteractables();
-        DisableExtraCameras(player);
+        if (sceneName == "Level01_Entrance")
+        {
+            EnsureGround();
+            GameObject player = EnsurePlayer();
+            EnsureHUDManager();
+            TunePlayerController(player);
+            EnsureSandboxGeometry();
+            EnsureSandboxInteractables();
+            DisableExtraCameras(player);
+            return;
+        }
+
+        if (sceneName == "Level04_Vault")
+        {
+            GameObject player = EnsurePlayer();
+            EnsureHUDManager();
+            TunePlayerController(player);
+            TuneLevel04Interaction(player);
+            DisableExtraCameras(player);
+        }
     }
 
     static void EnsureSaveSystemExists()
@@ -148,6 +160,16 @@ public static class SceneBootstrapper
             controller.skinWidth = 0.08f;
             controller.minMoveDistance = 0f;
         }
+    }
+
+    static void TuneLevel04Interaction(GameObject player)
+    {
+        PlayerInteraction interaction = player.GetComponent<PlayerInteraction>();
+        if (interaction == null)
+            return;
+
+        interaction.interactionRange = 5f;
+        interaction.interactionProbeRadius = 0.45f;
     }
 
     static void EnsureSandboxGeometry()

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -5,6 +6,7 @@ public class PlayerInteraction : MonoBehaviour
 {
     public float interactionRange = 4f;
     public LayerMask interactionMask = ~0;
+    public float interactionProbeRadius = 0.15f;
 
     private PlayerMovement playerMovement;
     private PlayerHealth playerHealth;
@@ -49,7 +51,7 @@ public class PlayerInteraction : MonoBehaviour
         }
 
         IPlayerInteractable interactable = FindInteractable();
-        if (interactable == null || !interactable.CanInteract(gameObject))
+        if (interactable == null)
         {
             HidePrompt();
             return;
@@ -65,10 +67,31 @@ public class PlayerInteraction : MonoBehaviour
     IPlayerInteractable FindInteractable()
     {
         Ray ray = new Ray(playerMovement.ViewTransform.position, playerMovement.ViewTransform.forward);
-        if (!Physics.Raycast(ray, out RaycastHit hit, interactionRange, interactionMask, QueryTriggerInteraction.Collide))
+        RaycastHit[] hits = Physics.SphereCastAll(
+            ray,
+            interactionProbeRadius,
+            interactionRange,
+            interactionMask,
+            QueryTriggerInteraction.Collide);
+
+        if (hits == null || hits.Length == 0)
             return null;
 
-        return FindInteractableComponent(hit.collider);
+        Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+
+        foreach (RaycastHit hit in hits)
+        {
+            IPlayerInteractable interactable = FindInteractableComponent(hit.collider);
+            if (interactable == null)
+                continue;
+
+            if (!interactable.CanInteract(gameObject))
+                continue;
+
+            return interactable;
+        }
+
+        return null;
     }
 
     IPlayerInteractable FindInteractableComponent(Collider hitCollider)
@@ -100,9 +123,6 @@ public class PlayerInteraction : MonoBehaviour
 
     bool WasInteractPressedThisFrame()
     {
-        if (Keyboard.current != null)
-            return Keyboard.current.eKey.wasPressedThisFrame;
-
-        return Input.GetKeyDown(KeyCode.E);
+        return Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame;
     }
 }

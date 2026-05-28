@@ -11,6 +11,7 @@ public class PauseMenu : MonoBehaviour
     [Header("Panels")]
     [FormerlySerializedAs("pausePanel")]
     public GameObject pauseMenuPanel;
+    public GameObject settingsPanel;
 
     [Header("Buttons")]
     public Button resumeButton;
@@ -20,6 +21,7 @@ public class PauseMenu : MonoBehaviour
 
     private bool isPaused = false;
     private CanvasGroup pauseCanvasGroup;
+    public bool IsPaused => isPaused;
 
     void Awake()
     {

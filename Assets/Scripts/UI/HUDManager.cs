@@ -38,14 +38,12 @@ public class HUDManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
-        AutoBindHealthBar();
-        AutoBindScoreImage();
+        AutoBindSceneReferences();
     }
 
     void Start()
     {
-        AutoBindHealthBar();
-        AutoBindScoreImage();
+        AutoBindSceneReferences();
         if (interactPromptText != null) interactPromptText.gameObject.SetActive(false);
         if (interactBackground != null) interactBackground.SetActive(false);
         if (checkpointText != null) checkpointText.gameObject.SetActive(false);
@@ -65,8 +63,7 @@ public class HUDManager : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        AutoBindHealthBar();
-        AutoBindScoreImage();
+        AutoBindSceneReferences();
         ShowHUD(scene.name != "MainMenu");
 
         PlayerHealth playerHealth = FindObjectOfType<PlayerHealth>();
@@ -131,6 +128,16 @@ public class HUDManager : MonoBehaviour
     {
         if (interactPromptText != null) interactPromptText.gameObject.SetActive(false);
         if (interactBackground != null) interactBackground.SetActive(false);
+    }
+
+    public void ShowInteractionPrompt(string message)
+    {
+        ShowInteractPrompt(message);
+    }
+
+    public void HideInteractionPrompt()
+    {
+        HideInteractPrompt();
     }
 
     public void ShowCheckpointMessage()
@@ -205,6 +212,55 @@ public class HUDManager : MonoBehaviour
             if (image.name == "ScoreImage")
             {
                 scoreImage = image;
+                break;
+            }
+        }
+    }
+
+    void AutoBindSceneReferences()
+    {
+        AutoBindHealthBar();
+        AutoBindScoreImage();
+        AutoBindText(ref scoreText, "ScoreText");
+        AutoBindText(ref checkpointText, "CheckpointText");
+        AutoBindText(ref interactPromptText, "InteractPromptText");
+        AutoBindObject(ref messageBackground, "MessageBackground");
+        AutoBindObject(ref interactBackground, "InteractBackground");
+    }
+
+    void AutoBindText(ref TMP_Text target, string objectName)
+    {
+        if (target != null)
+            return;
+
+        TMP_Text[] texts = FindObjectsOfType<TMP_Text>(true);
+        foreach (TMP_Text text in texts)
+        {
+            if (text == null)
+                continue;
+
+            if (string.Equals(text.name.Trim(), objectName, System.StringComparison.OrdinalIgnoreCase))
+            {
+                target = text;
+                break;
+            }
+        }
+    }
+
+    void AutoBindObject(ref GameObject target, string objectName)
+    {
+        if (target != null)
+            return;
+
+        Transform[] transforms = FindObjectsOfType<Transform>(true);
+        foreach (Transform transform in transforms)
+        {
+            if (transform == null)
+                continue;
+
+            if (string.Equals(transform.name.Trim(), objectName, System.StringComparison.OrdinalIgnoreCase))
+            {
+                target = transform.gameObject;
                 break;
             }
         }
