@@ -202,25 +202,42 @@ public class SaveSystem : MonoBehaviour
 
     public void DeleteSave()
     {
-        PlayerPrefs.DeleteKey("SavedScene");
-        PlayerPrefs.DeleteKey("SavedLevelName");
-        PlayerPrefs.DeleteKey("SavedScore");
-        PlayerPrefs.DeleteKey("SavedPosX");
-        PlayerPrefs.DeleteKey("SavedPosY");
-        PlayerPrefs.DeleteKey("SavedPosZ");
-        PlayerPrefs.DeleteKey("SavedRedKey");
-        PlayerPrefs.DeleteKey("SavedBlueKey");
-
-        PlayerPrefs.DeleteKey("KeyPickedUp_Key_01");
-        PlayerPrefs.DeleteKey("KeyPickedUp_Key_02");
-        PlayerPrefs.DeleteKey("Door_Door_01");
-        PlayerPrefs.DeleteKey("Door_Door_02");
-        PlayerPrefs.DeleteKey("Door_Door_03");
-        PlayerPrefs.DeleteKey("CoinsCollected");
-        PlayerPrefs.Save();
+        ClearSavedData();
+        PlayerHealth.ShouldRestorePosition = false;
 
         _pendingUnlockedDoors.Clear();
         _pendingPickedUpKeys.Clear();
+    }
+
+    public static void ClearSavedData()
+    {
+        bool hadMusicVolume = PlayerPrefs.HasKey("MusicVolume");
+        float musicVolume = PlayerPrefs.GetFloat("MusicVolume", 1f);
+
+        bool hadSfxVolume = PlayerPrefs.HasKey("SFXVolume");
+        float sfxVolume = PlayerPrefs.GetFloat("SFXVolume", 1f);
+
+        bool hadResolution = PlayerPrefs.HasKey("Resolution");
+        int resolution = PlayerPrefs.GetInt("Resolution", 0);
+
+        bool hadFullscreen = PlayerPrefs.HasKey("Fullscreen");
+        int fullscreen = PlayerPrefs.GetInt("Fullscreen", 1);
+
+        PlayerPrefs.DeleteAll();
+
+        if (hadMusicVolume)
+            PlayerPrefs.SetFloat("MusicVolume", musicVolume);
+
+        if (hadSfxVolume)
+            PlayerPrefs.SetFloat("SFXVolume", sfxVolume);
+
+        if (hadResolution)
+            PlayerPrefs.SetInt("Resolution", resolution);
+
+        if (hadFullscreen)
+            PlayerPrefs.SetInt("Fullscreen", fullscreen);
+
+        PlayerPrefs.Save();
     }
 
     public bool HasSave()

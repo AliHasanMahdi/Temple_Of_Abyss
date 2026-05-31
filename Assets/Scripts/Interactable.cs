@@ -24,6 +24,12 @@ public abstract class Interactable : MonoBehaviour, IPlayerInteractable
 
         Transform origin = interactionOrigin != null ? interactionOrigin : transform;
         Transform other = interactor.transform;
+
+        PlayerMovement movement = interactor.GetComponent<PlayerMovement>()
+            ?? interactor.GetComponentInChildren<PlayerMovement>();
+        if (movement != null && movement.ViewTransform != null)
+            other = movement.ViewTransform;
+
         return Vector3.Distance(origin.position, other.position) <= maxDistance;
     }
 

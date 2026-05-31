@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class AN_DoorKey : MonoBehaviour
+public class AN_DoorKey : MonoBehaviour, IPlayerInteractable
 {
+    const float MinimumPickupTriggerRadius = 0.9f;
+
     public enum KeyType
     {
         Red,
@@ -21,6 +23,11 @@ public class AN_DoorKey : MonoBehaviour
     public float pickupRange = 2f;
 
     private AN_HeroInteractive hero;
+
+    void Awake()
+    {
+        EnsurePickupCollider();
+    }
 
     void Start()
     {
@@ -41,11 +48,36 @@ public class AN_DoorKey : MonoBehaviour
 
     void Update()
     {
+        if (!UseLegacyInteraction()) return;
+        hero ??= Object.FindAnyObjectByType<AN_HeroInteractive>();
         if (hero == null) return;
         if (!InRange()) return;
 
         if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
             PickUp();
+    }
+
+    public bool CanInteract(GameObject interactor)
+    {
+        return enabled &&
+               gameObject.activeInHierarchy &&
+               ResolveHero(interactor) != null &&
+               InRange(interactor);
+    }
+
+    public string GetPromptText()
+    {
+        return keyType == KeyType.Red
+            ? "Press E to pick up red key"
+            : "Press E to pick up blue key";
+    }
+
+    public void Interact(GameObject interactor)
+    {
+        if (ResolveHero(interactor) == null)
+            return;
+
+        PickUp();
     }
 
     void PickUp()
@@ -61,6 +93,9 @@ public class AN_DoorKey : MonoBehaviour
                 Debug.Log("[AN_DoorKey] Blue Key picked up!");
                 break;
         }
+
+        if (InventoryManager.Instance != null)
+            InventoryManager.Instance.AddKey(keyType == KeyType.Red);
 
         // Held in memory only — flushed to disk when player touches a checkpoint.
         // If the player dies before that, the scene reloads, pending memory is gone,
@@ -81,6 +116,52 @@ public class AN_DoorKey : MonoBehaviour
             transform.position,
             Camera.main.transform.position
         ) < pickupRange;
+    }
+
+    bool InRange(GameObject interactor)
+    {
+        if (interactor == null)
+            return false;
+
+        Transform origin = interactor.transform;
+        PlayerMovement movement = interactor.GetComponent<PlayerMovement>()
+            ?? interactor.GetComponentInChildren<PlayerMovement>();
+        if (movement != null && movement.ViewTransform != null)
+            origin = movement.ViewTransform;
+
+        return Vector3.Distance(transform.position, origin.position) < pickupRange;
+    }
+
+    bool UseLegacyInteraction()
+    {
+        return Object.FindFirstObjectByType<PlayerInteraction>() == null;
+    }
+
+    AN_HeroInteractive ResolveHero(GameObject interactor)
+    {
+        if (hero != null)
+            return hero;
+
+        if (interactor != null)
+        {
+            hero = interactor.GetComponent<AN_HeroInteractive>()
+                ?? interactor.GetComponentInChildren<AN_HeroInteractive>();
+        }
+
+        if (hero == null)
+            hero = Object.FindAnyObjectByType<AN_HeroInteractive>();
+
+        return hero;
+    }
+
+    void EnsurePickupCollider()
+    {
+        SphereCollider sphereCollider = GetComponent<SphereCollider>();
+        if (sphereCollider == null)
+            sphereCollider = gameObject.AddComponent<SphereCollider>();
+
+        sphereCollider.isTrigger = true;
+        sphereCollider.radius = Mathf.Max(sphereCollider.radius, MinimumPickupTriggerRadius);
     }
 
     void OnDrawGizmosSelected()

@@ -8,12 +8,12 @@ using UnityEngine.InputSystem;
 public class InventoryManager : MonoBehaviour
 {
     public static InventoryManager Instance { get; private set; }
+    public bool IsOpen => isOpen;
 
     public GameObject inventoryUI;
     public GridGenerator gridGen;
     public KeyCode legacyToggleKey = KeyCode.I;
     public bool pauseGameWhenOpen = true;
-    public bool IsOpen => isOpen;
 
     private bool isOpen;
     private CursorLockMode previousLockState;
@@ -220,7 +220,7 @@ public class InventoryManager : MonoBehaviour
 
     private void SyncKeysFromHero()
     {
-        AN_HeroInteractive hero = FindFirstObjectByType<AN_HeroInteractive>();
+        AN_HeroInteractive hero = FindObjectOfType<AN_HeroInteractive>();
         if (hero == null)
         {
             return;
@@ -254,7 +254,7 @@ public class InventoryManager : MonoBehaviour
 
     private void SyncHeroKeyFlags()
     {
-        AN_HeroInteractive hero = FindFirstObjectByType<AN_HeroInteractive>();
+        AN_HeroInteractive hero = FindObjectOfType<AN_HeroInteractive>();
         if (hero == null)
         {
             return;

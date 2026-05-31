@@ -143,7 +143,7 @@ public class GameOverMenu : MonoBehaviour
 
     void EnsureEventSystem()
     {
-        EventSystem eventSystem = FindFirstObjectByType<EventSystem>();
+        EventSystem eventSystem = FindObjectOfType<EventSystem>();
         if (eventSystem == null)
         {
             GameObject eventSystemObject = new GameObject("EventSystem");
@@ -209,7 +209,7 @@ public class GameOverMenu : MonoBehaviour
         TMP_Text text = obj.AddComponent<TextMeshProUGUI>();
         text.text = value;
         text.fontSize = size;
-        text.textWrappingMode = TextWrappingModes.NoWrap;
+        text.enableWordWrapping = false;
         text.raycastTarget = false;
         return text;
     }

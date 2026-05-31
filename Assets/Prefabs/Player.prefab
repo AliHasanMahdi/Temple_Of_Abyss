@@ -148,6 +148,7 @@ GameObject:
   - component: {fileID: 6876412325443608794}
   - component: {fileID: 9155617906821861543}
   - component: {fileID: 8929481556330291837}
+  - component: {fileID: 6319408244109627312}
   - component: {fileID: 4953382557421245609}
   - component: {fileID: 4601527910731374349}
   - component: {fileID: 1458893195107158355}
@@ -244,6 +245,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
   maxHealth: 100
   currentHealth: 0
+--- !u!114 &6319408244109627312
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1546191697318623123}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0aee5f6368464b9fae98afd5d35df825, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerInteraction
+  interactionRange: 4
+  interactionMask:
+    serializedVersion: 2
+    m_Bits: -1
+  interactionProbeRadius: 0.15
 --- !u!114 &4601527910731374349
 MonoBehaviour:
   m_ObjectHideFlags: 0

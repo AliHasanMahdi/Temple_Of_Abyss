@@ -27,7 +27,12 @@ public class Level05ChamberDoor : MonoBehaviour, IPlayerInteractable
 
     public bool CanInteract(GameObject interactor)
     {
-        return enabled && gameObject.activeInHierarchy && !opened && !treasureDoor && IsWithinRange(interactor);
+        return enabled &&
+               gameObject.activeInHierarchy &&
+               !opened &&
+               !treasureDoor &&
+               !HasAttachedCollectibleKey(interactor) &&
+               IsWithinRange(interactor);
     }
 
     public string GetPromptText()
@@ -81,5 +86,26 @@ public class Level05ChamberDoor : MonoBehaviour, IPlayerInteractable
             origin = movement.ViewTransform;
 
         return Vector3.Distance(transform.position, origin.position) <= interactDistance;
+    }
+
+    private bool HasAttachedCollectibleKey(GameObject interactor)
+    {
+        if (string.IsNullOrEmpty(requiredItemId) || PersistentInventory.Has(requiredItemId))
+            return false;
+
+        Level05QuestItem[] childItems = GetComponentsInChildren<Level05QuestItem>(true);
+        foreach (Level05QuestItem item in childItems)
+        {
+            if (item != null &&
+                item.enabled &&
+                item.gameObject.activeInHierarchy &&
+                item.itemId == requiredItemId &&
+                item.CanInteract(interactor))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -8,12 +8,4 @@ public class AN_HeroInteractive : MonoBehaviour
     public bool RedKey = false, BlueKey = false;
     [Tooltip("Child empty object for plug following")]
     public Transform GoalPosition;
-
-    public void AddKey(bool isRedKey)
-    {
-        if (isRedKey)
-            RedKey = true;
-        else
-            BlueKey = true;
-    }
 }

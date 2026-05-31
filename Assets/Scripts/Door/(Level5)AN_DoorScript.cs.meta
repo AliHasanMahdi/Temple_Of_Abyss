@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 3f0c0f9cee97696468794cb8ebea6eda
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 163249
+  packageName: Interactive Physical Door Pack
+  packageVersion: 1.0
+  assetPath: Assets/AN Interactive Physical Door Pack/Scripts/AN_DoorScript.cs
+  uploadId: 353527

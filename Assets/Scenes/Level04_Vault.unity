@@ -2202,6 +2202,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5620097159907514566, guid: 07dd0ed6acb5c5140a213008cf7b2a1d, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5620097159907514566, guid: 07dd0ed6acb5c5140a213008cf7b2a1d, type: 3}
       propertyPath: BlueLocked
       value: 1
       objectReference: {fileID: 0}
@@ -2528,8 +2532,25 @@ MonoBehaviour:
   releasedDoorKeyObject: {fileID: 866046759}
   submitInteractable: {fileID: 300040012}
   solvedSound: {fileID: 8300000, guid: 71338e9c0995b42569ef100ba7f3c5c7, type: 3}
+  solvedSoundVolume: 0.9
   solvedChestPosition: {x: -6.656023, y: 9.354, z: -18.86613}
   solvedChestEulerAngles: {x: 5.635, y: -2.782, z: -86.195}
+  disableSubmitAfterSolve: 1
+  progressMessageFormat: '{0} bulls, {1} cows'
+  progressMessageDuration: 2
+  solvedMessage: Vault code accepted!
+  solvedMessageDuration: 2
+  correctPositionColor: {r: 0.28235295, g: 0.7254902, b: 0.32941177, a: 1}
+  correctNumberWrongPositionColor: {r: 0.9098039, g: 0.5686275, b: 0.18039216, a: 1}
+  wrongNumberColor: {r: 0.7882353, g: 0.24313726, b: 0.24313726, a: 1}
+  useCustomSecret: 0
+  customSecretDigits: 0000000000000000000000000000000000000000
+  detachReleasedKey: 1
+  releasedKeyTrigger: 0
+  releasedKeyUseGravity: 1
+  releasedKeyIsKinematic: 0
+  resetReleasedKeyVelocity: 1
+  releasedKeyCollisionMode: 2
 --- !u!114 &300040002
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8925,7 +8946,7 @@ Transform:
   m_GameObject: {fileID: 899690830}
   serializedVersion: 2
   m_LocalRotation: {x: 0.00000001545431, y: 0.70710677, z: -0.00000001545431, w: 0.7071069}
-  m_LocalPosition: {x: -8.69, y: 5.995, z: -15.82}
+  m_LocalPosition: {x: -8.69, y: 6.024, z: -15.82}
   m_LocalScale: {x: 1.7977796, y: 1.7977799, z: 1.7977796}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -8948,7 +8969,7 @@ SphereCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Radius: 0.35
   m_Center: {x: 0, y: 0, z: 0}
@@ -8966,7 +8987,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   keyType: 0
   keyID: Key_095
-  pickupRange: 2
+  pickupRange: 1
 --- !u!23 &899690834
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -12363,7 +12384,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PauseMenu
   pauseMenuPanel: {fileID: 1568350733}
-  settingsPanel: {fileID: 25329240}
   resumeButton: {fileID: 323386410}
   settingsButton: {fileID: 684232763}
   restartButton: {fileID: 896980650}
@@ -13504,7 +13524,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5800104119113348540, guid: 45777845d86ab3c48ade3fb6485b4f1c, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 2.2
+      value: 1.258
       objectReference: {fileID: 0}
     - target: {fileID: 5800104119113348540, guid: 45777845d86ab3c48ade3fb6485b4f1c, type: 3}
       propertyPath: m_LocalPosition.z
@@ -18911,6 +18931,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8929481556330291837, guid: b8278127268cca4499b8d3b6b71daaec, type: 3}
+      propertyPath: jumpHeight
+      value: 2.5
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -19319,6 +19343,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1962733607}
   - component: {fileID: 1962733606}
+  - component: {fileID: 1962733608}
   m_Layer: 0
   m_Name: Door_closed_forever
   m_TagString: Untagged
@@ -19365,6 +19390,45 @@ Transform:
   - {fileID: 1471635506}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
+--- !u!114 &1962733608
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1962733605}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2dd7d2f1a9d04557b6fd7ee50ddd4d42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  leverButtons: []
+  autoFindLeversByName: 1
+  requiredLeverCount: 5
+  fallbackLeverNames:
+  - Lever_Prefab (1)
+  - Lever_Prefab (2)
+  - Lever_Prefab (3)
+  - Lever_Prefab (4)
+  - Lever_Prefab
+  wallRigidbody: {fileID: 0}
+  releasedDoorKeyObject: {fileID: 899690830}
+  releaseWallOnSolve: 0
+  enableGravity: 1
+  startKinematic: 0
+  releaseDoorKeyOnSolve: 1
+  detachReleasedKey: 1
+  releasedKeyTrigger: 0
+  releasedKeyUseGravity: 1
+  releasedKeyIsKinematic: 0
+  resetReleasedKeyVelocity: 1
+  releasedKeyCollisionMode: 2
+  unlockSound: {fileID: 0}
+  unlockVolume: 0.9
+  printSequenceToConsole: 1
+  useCustomSequence: 0
+  customSequence: 
+  generatedSequence: 
 --- !u!1 &1965622749
 GameObject:
   m_ObjectHideFlags: 0

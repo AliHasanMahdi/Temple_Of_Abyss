@@ -16,6 +16,7 @@ public class TreasureRoom : MonoBehaviour
     private bool playerInRoom = false;
     private bool playerNearTreasure = false;
     private bool collected = false;
+    public bool IsCollected => collected;
 
     void Start()
     {
@@ -27,7 +28,7 @@ public class TreasureRoom : MonoBehaviour
     {
         if (collected) return;
 
-        if (Input.GetKeyDown(KeyCode.E) && playerNearTreasure)
+        if (UseLegacyInteraction() && Input.GetKeyDown(KeyCode.E) && playerNearTreasure)
         {
             CollectTreasure();
         }
@@ -56,7 +57,9 @@ public class TreasureRoom : MonoBehaviour
     public void PlayerNearTreasure(bool isNear)
     {
         playerNearTreasure = isNear;
-        if (isNear)
+        if (isNear && !UseLegacyInteraction())
+            promptText.text = "";
+        else if (isNear)
             promptText.text = "Press E to collect the Treasure!";
         else if (playerInRoom)
             promptText.text = "You found the Treasure Room!";
@@ -64,8 +67,11 @@ public class TreasureRoom : MonoBehaviour
             promptText.text = "";
     }
 
-    void CollectTreasure()
+    public void CollectTreasure()
     {
+        if (collected)
+            return;
+
         collected = true;
         promptText.text = "";
         victoryPanel.SetActive(true);
@@ -82,5 +88,10 @@ public class TreasureRoom : MonoBehaviour
     {
         Time.timeScale = 1f; // reset time before loading
         SceneManager.LoadScene(mainMenuSceneName);
+    }
+
+    bool UseLegacyInteraction()
+    {
+        return FindFirstObjectByType<PlayerInteraction>() == null;
     }
 }

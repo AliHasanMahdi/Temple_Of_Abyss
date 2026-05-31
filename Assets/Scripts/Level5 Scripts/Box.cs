@@ -1,37 +1,41 @@
-using UnityEngine;
 using TMPro;
+using UnityEngine;
+using UnityEngine.InputSystem;
 
-public class Box : MonoBehaviour
+public class Box : MonoBehaviour, IPlayerInteractable
 {
     public bool hasKey = false;
     public TMP_Text promptText;
+    public float interactionRange = 3f;
 
     private bool playerNearby = false;
     private float holdTimer = 0f;
     private float holdDuration = 2f;
     private bool opened = false;
+    private float lastFocusTime = float.NegativeInfinity;
+    private const float FocusGrace = 0.12f;
 
     void Update()
     {
         if (!playerNearby || opened) return;
 
-        if (Input.GetKey(KeyCode.E))
+        bool usingPromptPath = !UseLegacyInteraction();
+        bool canHoldOpen = usingPromptPath ? IsFocused() : true;
+
+        if (Keyboard.current != null && Keyboard.current.eKey.isPressed && canHoldOpen)
         {
             holdTimer += Time.deltaTime;
-            float percent = Mathf.FloorToInt((holdTimer / holdDuration) * 100);
-            promptText.text = "Opening... " + percent + "%";
+            ShowLocalPrompt("Opening... " + Mathf.FloorToInt((holdTimer / holdDuration) * 100) + "%");
 
             if (holdTimer >= holdDuration)
-            {
                 OpenBox();
-            }
         }
         else
         {
             if (holdTimer > 0f)
             {
                 holdTimer = 0f;
-                promptText.text = "Hold E to open box";
+                ShowLocalPrompt("Hold E to open box");
             }
         }
     }
@@ -41,7 +45,7 @@ public class Box : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             playerNearby = true;
-            promptText.text = "Hold E to open box";
+            ShowLocalPrompt("Hold E to open box");
         }
     }
 
@@ -51,8 +55,31 @@ public class Box : MonoBehaviour
         {
             playerNearby = false;
             holdTimer = 0f;
-            promptText.text = "";
+            lastFocusTime = float.NegativeInfinity;
+            ShowLocalPrompt("");
         }
+    }
+
+    public bool CanInteract(GameObject interactor)
+    {
+        if (opened || !playerNearby || !InRange(interactor))
+            return false;
+
+        lastFocusTime = Time.unscaledTime;
+        return true;
+    }
+
+    public string GetPromptText()
+    {
+        if (holdTimer > 0f)
+            return "Hold E to open box (" + Mathf.FloorToInt((holdTimer / holdDuration) * 100) + "%)";
+
+        return "Hold E to open box";
+    }
+
+    public void Interact(GameObject interactor)
+    {
+        // Hold progress is handled in Update while the interact key stays pressed.
     }
 
     void OpenBox()
@@ -61,18 +88,21 @@ public class Box : MonoBehaviour
         if (hasKey)
         {
             // Add key to hero
-            AN_HeroInteractive hero = Object.FindAnyObjectByType<AN_HeroInteractive>();
-            if (hero != null) hero.AddKey(true); // true = red key
+            AN_HeroInteractive hero = FindObjectOfType<AN_HeroInteractive>();
+            if (hero != null) hero.RedKey = true;
 
             // Show in inventory
             if (InventoryManager.Instance != null)
                 InventoryManager.Instance.AddKey(true);
 
-            promptText.text = "You found a KEY!";
+            if (GameManager.instance != null)
+                GameManager.instance.KeyFound();
+
+            ShowLocalPrompt("You found a KEY!");
         }
         else
         {
-            promptText.text = "Empty box...";
+            ShowLocalPrompt("Empty box...");
         }
 
         // Clear prompt after 2 seconds
@@ -81,6 +111,38 @@ public class Box : MonoBehaviour
 
     void ClearPrompt()
     {
-        promptText.text = "";
+        ShowLocalPrompt("");
+    }
+
+    bool InRange(GameObject interactor)
+    {
+        if (interactor == null)
+            return false;
+
+        Transform origin = interactor.transform;
+        PlayerMovement movement = interactor.GetComponent<PlayerMovement>()
+            ?? interactor.GetComponentInChildren<PlayerMovement>();
+        if (movement != null && movement.ViewTransform != null)
+            origin = movement.ViewTransform;
+
+        return Vector3.Distance(transform.position, origin.position) <= interactionRange;
+    }
+
+    bool IsFocused()
+    {
+        return Time.unscaledTime - lastFocusTime <= FocusGrace;
+    }
+
+    bool UseLegacyInteraction()
+    {
+        return Object.FindFirstObjectByType<PlayerInteraction>() == null;
+    }
+
+    void ShowLocalPrompt(string message)
+    {
+        if (!UseLegacyInteraction() || promptText == null)
+            return;
+
+        promptText.text = message;
     }
 }

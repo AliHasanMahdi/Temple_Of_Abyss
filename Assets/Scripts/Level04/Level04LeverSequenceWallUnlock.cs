@@ -3,6 +3,10 @@ using UnityEngine;
 
 public class Level04LeverSequenceWallUnlock : MonoBehaviour
 {
+    const float ReleasedKeyDropKick = 0.65f;
+    const float ReleasedKeyDropOffset = 0.08f;
+    const float ReleasedKeyOutwardOffset = 0.12f;
+
     [Header("Levers")]
     [SerializeField] AN_Button[] leverButtons;
     [SerializeField] bool autoFindLeversByName = true;
@@ -52,28 +56,22 @@ public class Level04LeverSequenceWallUnlock : MonoBehaviour
         GenerateSequence();
     }
 
+    void OnEnable()
+    {
+        AN_Button.LeverInteractionTriggered += OnLeverInteractionTriggered;
+    }
+
+    void OnDisable()
+    {
+        AN_Button.LeverInteractionTriggered -= OnLeverInteractionTriggered;
+    }
+
     void Update()
     {
-        if (!checkingEnabled || levers == null || generatedSequence == null)
+        if (!checkingEnabled)
             return;
 
-        for (int i = 0; i < generatedSequence.Length; i++)
-        {
-            if (levers[i] == null || levers[i].IsPressed != generatedSequence[i])
-                return;
-        }
-
-        checkingEnabled = false;
-
-        if (releaseWallOnSolve)
-            ReleaseWall();
-
-        if (releaseDoorKeyOnSolve)
-            ReleaseDoorKey();
-
-        if (unlockSound != null)
-            TempleAudio.PlaySfx(unlockSound, unlockVolume);
-
+        TryCompleteSequence();
     }
 
     void ResolveLevers()
@@ -113,6 +111,9 @@ public class Level04LeverSequenceWallUnlock : MonoBehaviour
 
         levers = foundLevers.GetRange(0, requiredLeverCount).ToArray();
         leverButtons = levers;
+
+        if (printSequenceToConsole)
+            Debug.Log("[Level04LeverSequenceWallUnlock] Found levers: " + BuildLeverNamesDebugString());
     }
 
     void GenerateSequence()
@@ -158,6 +159,54 @@ public class Level04LeverSequenceWallUnlock : MonoBehaviour
             Debug.Log("[Level04LeverSequenceWallUnlock] Sequence: " + BuildSequenceDebugString());
     }
 
+    void OnLeverInteractionTriggered(AN_Button lever)
+    {
+        if (!checkingEnabled || lever == null || levers == null)
+            return;
+
+        for (int i = 0; i < levers.Length; i++)
+        {
+            if (!ReferenceEquals(levers[i], lever))
+                continue;
+
+            if (printSequenceToConsole)
+                Debug.Log("[Level04LeverSequenceWallUnlock] Lever toggled: " + lever.transform.root.name + " -> " + lever.IsPressed);
+
+            TryCompleteSequence();
+            return;
+        }
+    }
+
+    void TryCompleteSequence()
+    {
+        if (!checkingEnabled)
+            return;
+
+        if (levers == null || generatedSequence == null || levers.Length == 0 || generatedSequence.Length == 0)
+            return;
+
+        if (levers.Length != generatedSequence.Length)
+            return;
+
+        for (int i = 0; i < generatedSequence.Length; i++)
+        {
+            if (levers[i] == null || levers[i].IsPressed != generatedSequence[i])
+                return;
+        }
+
+        checkingEnabled = false;
+        Debug.Log("sequence found");
+
+        if (releaseWallOnSolve)
+            ReleaseWall();
+
+        if (releaseDoorKeyOnSolve)
+            ReleaseDoorKey();
+
+        if (unlockSound != null)
+            TempleAudio.PlaySfx(unlockSound, unlockVolume);
+    }
+
     void ReleaseWall()
     {
         if (wallRigidbody == null)
@@ -173,19 +222,38 @@ public class Level04LeverSequenceWallUnlock : MonoBehaviour
 
     void ReleaseDoorKey()
     {
-        if (releasedDoorKeyObject == null)
+        Transform mountedKeyTransform = releasedDoorKeyObject != null ? releasedDoorKeyObject.transform : null;
+        Transform sourceParent = mountedKeyTransform != null ? mountedKeyTransform.parent : null;
+        GameObject releasedKey = CreateReleasedDoorKeyInstance();
+        if (releasedKey == null)
             return;
 
-        if (detachReleasedKey)
-            releasedDoorKeyObject.transform.SetParent(null, true);
+        Transform keyTransform = releasedKey.transform;
+        Vector3 outwardDirection = Vector3.zero;
+        Collider[] sourceColliders = sourceParent != null
+            ? sourceParent.GetComponentsInChildren<Collider>(true)
+            : System.Array.Empty<Collider>();
+        Collider[] keyColliders = releasedKey.GetComponentsInChildren<Collider>(true);
+        if (sourceParent != null)
+        {
+            outwardDirection = keyTransform.position - sourceParent.position;
+            outwardDirection = Vector3.ProjectOnPlane(outwardDirection, Vector3.up).normalized;
+        }
 
-        Collider collider = releasedDoorKeyObject.GetComponent<Collider>();
+        if (detachReleasedKey)
+            keyTransform.SetParent(null, true);
+
+        keyTransform.position += Vector3.down * ReleasedKeyDropOffset;
+        if (outwardDirection.sqrMagnitude > 0.0001f)
+            keyTransform.position += outwardDirection * ReleasedKeyOutwardOffset;
+
+        Collider collider = releasedKey.GetComponent<Collider>();
         if (collider != null)
             collider.isTrigger = releasedKeyTrigger;
 
-        Rigidbody body = releasedDoorKeyObject.GetComponent<Rigidbody>();
+        Rigidbody body = releasedKey.GetComponent<Rigidbody>();
         if (body == null)
-            body = releasedDoorKeyObject.AddComponent<Rigidbody>();
+            body = releasedKey.AddComponent<Rigidbody>();
 
         body.isKinematic = releasedKeyIsKinematic;
         body.useGravity = releasedKeyUseGravity;
@@ -195,7 +263,72 @@ public class Level04LeverSequenceWallUnlock : MonoBehaviour
             body.angularVelocity = Vector3.zero;
         }
         body.collisionDetectionMode = releasedKeyCollisionMode;
+        Physics.SyncTransforms();
         body.WakeUp();
+        IgnoreSourceDoorCollisions(keyColliders, sourceColliders);
+        if (!body.isKinematic)
+        {
+            Vector3 releaseVelocity = Vector3.down;
+            if (outwardDirection.sqrMagnitude > 0.0001f)
+                releaseVelocity += outwardDirection * 0.45f;
+
+            body.AddForce(releaseVelocity.normalized * ReleasedKeyDropKick, ForceMode.VelocityChange);
+        }
+    }
+
+    GameObject CreateReleasedDoorKeyInstance()
+    {
+        if (releasedDoorKeyObject == null)
+            return null;
+
+        Transform mountedKeyTransform = releasedDoorKeyObject.transform;
+        GameObject releasedKey = Instantiate(
+            releasedDoorKeyObject,
+            mountedKeyTransform.position,
+            mountedKeyTransform.rotation);
+
+        releasedKey.name = releasedDoorKeyObject.name;
+        releasedKey.transform.localScale = mountedKeyTransform.lossyScale;
+        DisableMountedDoorKey();
+        return releasedKey;
+    }
+
+    void DisableMountedDoorKey()
+    {
+        if (releasedDoorKeyObject == null)
+            return;
+
+        Collider[] colliders = releasedDoorKeyObject.GetComponentsInChildren<Collider>(true);
+        foreach (Collider collider in colliders)
+            collider.enabled = false;
+
+        Renderer[] renderers = releasedDoorKeyObject.GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer renderer in renderers)
+            renderer.enabled = false;
+
+        releasedDoorKeyObject.SetActive(false);
+    }
+
+    static void IgnoreSourceDoorCollisions(Collider[] keyColliders, Collider[] sourceColliders)
+    {
+        if (keyColliders == null || sourceColliders == null)
+            return;
+
+        for (int i = 0; i < keyColliders.Length; i++)
+        {
+            Collider keyCollider = keyColliders[i];
+            if (keyCollider == null)
+                continue;
+
+            for (int j = 0; j < sourceColliders.Length; j++)
+            {
+                Collider sourceCollider = sourceColliders[j];
+                if (sourceCollider == null || sourceCollider == keyCollider)
+                    continue;
+
+                Physics.IgnoreCollision(keyCollider, sourceCollider, true);
+            }
+        }
     }
 
     string BuildSequenceDebugString()
@@ -208,5 +341,17 @@ public class Level04LeverSequenceWallUnlock : MonoBehaviour
             parts[i] = generatedSequence[i] ? "true" : "false";
 
         return string.Join(", ", parts);
+    }
+
+    string BuildLeverNamesDebugString()
+    {
+        if (levers == null || levers.Length == 0)
+            return "(none)";
+
+        string[] names = new string[levers.Length];
+        for (int i = 0; i < levers.Length; i++)
+            names[i] = levers[i] != null ? levers[i].transform.root.name : "(missing)";
+
+        return string.Join(", ", names);
     }
 }
