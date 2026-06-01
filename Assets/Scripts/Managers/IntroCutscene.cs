@@ -32,6 +32,7 @@ public class IntroCutscene : MonoBehaviour
     [Header("Timing")]
     public float demonLineDuration = 27f;
     public float americanLineDuration = 14f;
+    public float huntDelayAfterSnap = 10f;   // 10 seconds before demon hunts
 
     public MonoBehaviour[] scriptsToDisable;
 
@@ -52,7 +53,7 @@ public class IntroCutscene : MonoBehaviour
         cameraConstraint.constraintActive = false;
         cameraConstraint.locked = true;
         cameraConstraint.rotationAtRest = playerCamera.transform.eulerAngles;
-        cameraConstraint.rotationOffset = new Vector3(-40f, 0f, 0f);
+        cameraConstraint.rotationOffset = new Vector3(-45f, 0f, 0f); // Changed to -45
     }
 
     IEnumerator CutsceneSequence()
@@ -78,26 +79,36 @@ public class IntroCutscene : MonoBehaviour
 
         yield return new WaitForSeconds(demonLineDuration);
 
-        // --- SNAP BACK, UNFREEZE PLAYER, DEMON HUNTS ---
+        // --- SNAP BACK CAMERA (player still frozen for a moment) ---
         cameraConstraint.constraintActive = false;
         cameraConstraint.weight = 0f;
         playerCamera.transform.rotation = Quaternion.Euler(cameraConstraint.rotationAtRest);
 
+        // --- UNFREEZE PLAYER IMMEDIATELY ---
         EnablePlayerControls();
 
-        if (demonAI != null)
-        {
-            demonAI.enabled = true;
-            demonAI.StartHunting();   // instant chase, no warning
-        }
-
-        // --- AMERICAN DIALOGUE (player can move) ---
+        // --- START AMERICAN DIALOGUE (player can now move) ---
         if (subtitleText != null) subtitleText.text = americanLine;
         if (americanVoiceClip != null)
             AudioSource.PlayClipAtPoint(americanVoiceClip, player.position, voiceVolume);
 
-        yield return new WaitForSeconds(americanLineDuration);
+        // --- WAIT 10 SECONDS (player can move, demon still disabled) ---
+        yield return new WaitForSeconds(huntDelayAfterSnap);
 
+        // --- NOW ENABLE DEMON AND START HUNTING ---
+        if (demonAI != null)
+        {
+            demonAI.enabled = true;
+            demonAI.StartHunting();   // instant chase, no warning
+            // Ensure sight range is high (already 100 in your DemonAI)
+        }
+
+        // --- WAIT REMAINING TIME FOR AMERICAN DIALOGUE ---
+        float remainingAmerican = americanLineDuration - huntDelayAfterSnap;
+        if (remainingAmerican > 0f)
+            yield return new WaitForSeconds(remainingAmerican);
+
+        // --- HIDE SUBTITLES ---
         if (subtitlePanel != null) subtitlePanel.SetActive(false);
     }
 

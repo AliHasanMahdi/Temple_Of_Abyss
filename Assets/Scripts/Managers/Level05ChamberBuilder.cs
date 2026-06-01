@@ -273,6 +273,7 @@ public static class Level05ChamberBuilder
         Level05ChamberDoor chamberDoor = door.AddComponent<Level05ChamberDoor>();
         chamberDoor.requiredItemId = keyId;
         chamberDoor.doorName = roomName;
+        ConfigureDoorKeyPickup(door.transform, keyId, roomName + " Key", keyColor);
         CreateWallTorch(root, new Vector3(roomPortalX, FloorHeight, center.z - TorchFlankOffset), Quaternion.Euler(0f, roomDoorYaw, 0f));
         CreateWallTorch(root, new Vector3(roomPortalX, FloorHeight, center.z + TorchFlankOffset), Quaternion.Euler(0f, roomDoorYaw, 0f));
         return door;
@@ -447,7 +448,8 @@ public static class Level05ChamberBuilder
 
     private static void AttachDoorKeyGem(Transform doorVisual, Color color)
     {
-        GameObject gem = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        Transform existingGem = doorVisual.Find("Door_key");
+        GameObject gem = existingGem != null ? existingGem.gameObject : GameObject.CreatePrimitive(PrimitiveType.Sphere);
         gem.name = "Door_key";
         gem.transform.SetParent(doorVisual, false);
         gem.transform.localPosition = new Vector3(0f, 1.35f, 0.05f);
@@ -457,6 +459,52 @@ public static class Level05ChamberBuilder
         {
             renderer.material.color = color;
         }
+    }
+
+    private static void ConfigureDoorKeyPickup(Transform doorRoot, string itemId, string displayName, Color color)
+    {
+        if (doorRoot == null || string.IsNullOrEmpty(itemId))
+        {
+            return;
+        }
+
+        Transform keyTransform = doorRoot.Find("Door_Prefab_Closed/Door_key");
+        if (keyTransform == null)
+        {
+            keyTransform = doorRoot.Find("Door_key");
+        }
+
+        if (keyTransform == null)
+        {
+            return;
+        }
+
+        SphereCollider collider = keyTransform.GetComponent<SphereCollider>();
+        if (collider == null)
+        {
+            collider = keyTransform.gameObject.AddComponent<SphereCollider>();
+        }
+
+        collider.isTrigger = true;
+        collider.radius = 1.15f;
+        collider.center = Vector3.zero;
+
+        Level05QuestItem questItem = keyTransform.GetComponent<Level05QuestItem>();
+        if (questItem == null)
+        {
+            questItem = keyTransform.gameObject.AddComponent<Level05QuestItem>();
+        }
+
+        AN_DoorKey doorKey = keyTransform.GetComponent<AN_DoorKey>();
+        if (doorKey != null)
+        {
+            doorKey.enabled = false;
+        }
+
+        questItem.itemId = itemId;
+        questItem.displayName = displayName;
+        questItem.itemColor = color;
+        questItem.collectDistance = 3f;
     }
 
     private static GameObject CreatePedestal(string name, Transform parent, Vector3 position, Color color)

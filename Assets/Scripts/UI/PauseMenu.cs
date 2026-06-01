@@ -7,6 +7,7 @@ using UnityEngine.Serialization;
 public class PauseMenu : MonoBehaviour
 {
     public static PauseMenu Instance;
+    public bool IsPaused => isPaused;
 
     [Header("Panels")]
     [FormerlySerializedAs("pausePanel")]
@@ -20,7 +21,6 @@ public class PauseMenu : MonoBehaviour
 
     private bool isPaused = false;
     private CanvasGroup pauseCanvasGroup;
-    public bool IsPaused => isPaused;
 
     void Awake()
     {
@@ -82,7 +82,7 @@ public class PauseMenu : MonoBehaviour
         Time.timeScale = 0f;
         SetPausePanelVisible(true);
 
-        PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+        PlayerMovement pm = FindObjectOfType<PlayerMovement>();
         if (pm != null) pm.OnPause();
     }
 
@@ -93,7 +93,7 @@ public class PauseMenu : MonoBehaviour
         SetPausePanelVisible(false);
         if (SettingsMenu.Instance != null) SettingsMenu.Instance.Close();
 
-        PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+        PlayerMovement pm = FindObjectOfType<PlayerMovement>();
         if (pm != null) pm.OnResume();
     }
 

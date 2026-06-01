@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class EnemyHealth : MonoBehaviour
 {
+    const int KillScoreReward = 3;
+
     public float maxHealth = 100f;
     public float currentHealth;
 
@@ -46,6 +48,9 @@ public class EnemyHealth : MonoBehaviour
     {
         if (isDead) return;
         isDead = true;
+
+        if (HUDManager.Instance != null)
+            HUDManager.Instance.AddScore(KillScoreReward);
 
         // Stop AI
         if (ai != null) ai.enabled = false;

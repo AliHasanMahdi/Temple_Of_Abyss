@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class CheckpointInteractable : Interactable
 {
+    const int CheckpointScoreReward = 5;
     private bool isActivated;
 
     public override bool CanInteract(GameObject interactor)
@@ -20,6 +21,9 @@ public class CheckpointInteractable : Interactable
             return;
 
         isActivated = true;
+
+        if (HUDManager.Instance != null)
+            HUDManager.Instance.AddScore(CheckpointScoreReward);
 
         if (SaveSystem.Instance != null)
             SaveSystem.Instance.SaveGame();

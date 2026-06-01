@@ -8,10 +8,6 @@ public class PlayerHealth : MonoBehaviour
     public float currentHealth;
     public bool IsDead => currentHealth <= 0f;
 
-    [Header("Audio")]
-    public AudioSource playerAudioSource;
-    public AudioClip damageSound;
-
     public static bool ShouldRestorePosition = false;
 
     void Start()
@@ -35,21 +31,26 @@ public class PlayerHealth : MonoBehaviour
         string currentScene = SceneManager.GetActiveScene().name;
 
         if (savedScene != currentScene) yield break;
-        if (SaveSystem.Instance != null)
-        {
-            SaveSystem.Instance.RestorePlayerToSavedPosition(gameObject);
-        }
-        else
-        {
-            Vector3 savedPosition = new Vector3(
-                PlayerPrefs.GetFloat("SavedPosX", transform.position.x),
-                PlayerPrefs.GetFloat("SavedPosY", transform.position.y),
-                PlayerPrefs.GetFloat("SavedPosZ", transform.position.z));
-            transform.position = SaveSystem.GetSafePlayerPosition(savedPosition, gameObject);
-        }
+        if (!PlayerPrefs.HasKey("SavedPosX")) yield break;
 
-        yield return new WaitForFixedUpdate();
+        float x = PlayerPrefs.GetFloat("SavedPosX", 0f);
+        float y = PlayerPrefs.GetFloat("SavedPosY", 1f);
+        float z = PlayerPrefs.GetFloat("SavedPosZ", 0f);
+
+        Vector3 savedPos = new Vector3(x, y, z);
+        Debug.Log("Restoring to: " + savedPos);
+
+        CharacterController cc = GetComponent<CharacterController>();
+
+        // Disable → move → wait → enable
+        if (cc != null) cc.enabled = false;
+        transform.position = savedPos;
         yield return null;
+        yield return null;
+        if (cc != null) cc.enabled = true;
+        yield return null;
+
+        Debug.Log("CharacterController enabled: " + cc.enabled);
 
         // Restore score
         int savedScore = PlayerPrefs.GetInt("SavedScore", 0);
@@ -71,13 +72,6 @@ public class PlayerHealth : MonoBehaviour
     {
         currentHealth -= amount;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
-
-        // Play damage sound
-        if (playerAudioSource != null && damageSound != null)
-        {
-            playerAudioSource.PlayOneShot(damageSound);
-        }
-
         UpdateHUD();
         if (currentHealth <= 0) Die();
     }

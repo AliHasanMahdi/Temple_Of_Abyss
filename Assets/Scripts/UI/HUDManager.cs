@@ -27,6 +27,8 @@ public class HUDManager : MonoBehaviour
     private int score = 0;
     private Coroutine messageCoroutine;
     private bool hudVisible = true;
+    private bool interactionPromptVisible;
+    private string currentInteractionPrompt;
 
     void Awake()
     {
@@ -69,7 +71,7 @@ public class HUDManager : MonoBehaviour
         AutoBindScoreImage();
         ShowHUD(scene.name != "MainMenu");
 
-        PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+        PlayerHealth playerHealth = FindObjectOfType<PlayerHealth>();
         if (playerHealth != null)
             UpdateHealth(playerHealth.currentHealth, playerHealth.maxHealth);
     }
@@ -123,8 +125,18 @@ public class HUDManager : MonoBehaviour
 
     public void ShowInteractPrompt(string message)
     {
-        if (interactPromptText != null) { interactPromptText.text = message; interactPromptText.gameObject.SetActive(true); }
-        if (interactBackground != null) interactBackground.SetActive(true);
+        if (interactPromptText != null && currentInteractionPrompt != message)
+            interactPromptText.text = message;
+
+        currentInteractionPrompt = message;
+
+        if (interactPromptText != null && !interactPromptText.gameObject.activeSelf)
+            interactPromptText.gameObject.SetActive(true);
+
+        if (interactBackground != null && !interactBackground.activeSelf)
+            interactBackground.SetActive(true);
+
+        interactionPromptVisible = true;
     }
 
     public void ShowInteractionPrompt(string message)
@@ -134,8 +146,16 @@ public class HUDManager : MonoBehaviour
 
     public void HideInteractPrompt()
     {
-        if (interactPromptText != null) interactPromptText.gameObject.SetActive(false);
-        if (interactBackground != null) interactBackground.SetActive(false);
+        if (!interactionPromptVisible)
+            return;
+
+        if (interactPromptText != null && interactPromptText.gameObject.activeSelf)
+            interactPromptText.gameObject.SetActive(false);
+        if (interactBackground != null && interactBackground.activeSelf)
+            interactBackground.SetActive(false);
+
+        interactionPromptVisible = false;
+        currentInteractionPrompt = null;
     }
 
     public void HideInteractionPrompt()
@@ -177,7 +197,7 @@ public class HUDManager : MonoBehaviour
     {
         if (healthBar == null)
         {
-            Slider[] sliders = FindObjectsByType<Slider>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            Slider[] sliders = FindObjectsOfType<Slider>(true);
             foreach (Slider slider in sliders)
             {
                 if (slider.name == "HealthBar" || slider.name.Contains("Health"))
@@ -190,7 +210,7 @@ public class HUDManager : MonoBehaviour
 
         if (hpFill == null)
         {
-            Image[] images = FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            Image[] images = FindObjectsOfType<Image>(true);
             foreach (Image image in images)
             {
                 if (image.name == "Hp_Fill" || image.name == "HP_Fill" || image.name == "HealthFill")
@@ -209,7 +229,7 @@ public class HUDManager : MonoBehaviour
     {
         if (scoreImage != null) return;
 
-        Image[] images = FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Image[] images = FindObjectsOfType<Image>(true);
         foreach (Image image in images)
         {
             if (image.name == "ScoreImage")

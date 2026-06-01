@@ -43,6 +43,10 @@ public class Door : MonoBehaviour
         else if (GameManager.instance.HasKey())
         {
             GameManager.instance.UseKey();
+
+            if (InventoryManager.Instance != null)
+                InventoryManager.Instance.RemoveAnyKey();
+
             isUnlocked = true;
             promptText.text = "Unlocked! Press E to enter.";
         }

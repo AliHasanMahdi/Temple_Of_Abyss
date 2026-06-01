@@ -1,7 +1,9 @@
 ﻿using UnityEngine;
 
-public class AN_Button : MonoBehaviour
+public class AN_Button : MonoBehaviour, IPlayerInteractable
 {
+    public static event System.Action<AN_Button> LeverInteractionTriggered;
+
     [Tooltip("True for rotation like valve (used for ramp/elevator only)")]
     public bool isValve = false;
     [Tooltip("SelfRotation speed of valve")]
@@ -39,11 +41,8 @@ public class AN_Button : MonoBehaviour
 
     Animator anim;
     AudioSource audioSource;
-    [Header("Interaction Sounds")]
-    [SerializeField] AudioClip buttonSound;
-    [SerializeField] AudioClip leverSound;
-    [Range(0f, 1f)]
-    public float interactionVolume = 0.75f;
+    AudioClip buttonSound;
+    AudioClip leverSound;
 
     // NearView()
     float distance;
@@ -54,10 +53,16 @@ public class AN_Button : MonoBehaviour
     {
         get
         {
-            if (!isLever || anim == null)
-                return false;
+            if (isValve)
+                return isOpened;
 
-            return anim.GetBool("LeverUp");
+            if (anim == null)
+                anim = GetComponent<Animator>();
+
+            if (isLever && anim != null)
+                return anim.GetBool("LeverUp");
+
+            return isOpened;
         }
     }
 
@@ -68,11 +73,15 @@ public class AN_Button : MonoBehaviour
         if (audioSource == null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
-            ConfigureAudioSource();
+            audioSource.spatialBlend = 1f;
+            audioSource.rolloffMode = AudioRolloffMode.Linear;
+            audioSource.minDistance = 1f;
+            audioSource.maxDistance = 12f;
+            audioSource.playOnAwake = false;
         }
         else
         {
-            ConfigureAudioSource();
+            audioSource.maxDistance = Mathf.Max(audioSource.maxDistance, 12f);
         }
 
         LoadDefaultSound();
@@ -87,39 +96,9 @@ public class AN_Button : MonoBehaviour
     {
         if (!Locked)
         {
-            if (Input.GetKeyDown(KeyCode.E) && !isValve && NearView()) // 1.lever and 2.button
+            if (UseLegacyInteraction() && Input.GetKeyDown(KeyCode.E) && !isValve && NearView()) // 1.lever and 2.button
             {
-                PlayButtonSound();
-
-                // Door logic (still works if DoorObject is assigned)
-                if (DoorObject != null && DoorObject.Remote)
-                {
-                    DoorObject.Action();
-                    if (isLever)
-                    {
-                        if (DoorObject.isOpened) anim.SetBool("LeverUp", true);
-                        else anim.SetBool("LeverUp", false);
-                    }
-                    else anim.SetTrigger("ButtonPress");
-                }
-                else if (isLever)
-                {
-                    // No door assigned — just animate the lever toggle
-                    anim.SetBool("LeverUp", !anim.GetBool("LeverUp"));
-                }
-                else
-                {
-                    anim.SetTrigger("ButtonPress");
-                }
-
-                // Fire all connected spike traps
-                if (spikeTargets != null)
-                {
-                    foreach (LeverSpikeTarget spike in spikeTargets)
-                    {
-                        if (spike != null) spike.Activate();
-                    }
-                }
+                TriggerDiscreteInteraction();
             }
             else if (isValve && RampObject != null) // 3.valve
             {
@@ -162,13 +141,96 @@ public class AN_Button : MonoBehaviour
         }
     }
 
+    public bool CanInteract(GameObject interactor)
+    {
+        return enabled && gameObject.activeInHierarchy && !Locked && NearViewFrom(interactor);
+    }
+
+    public string GetPromptText()
+    {
+        if (isValve)
+            return "Press E to turn valve";
+
+        if (isLever)
+            return "Press E to pull lever";
+
+        return "Press E to press button";
+    }
+
+    public void Interact(GameObject interactor)
+    {
+        if (isValve || Locked)
+            return;
+
+        TriggerDiscreteInteraction();
+    }
+
     bool NearView() // it is true if you near interactive object
     {
+        float requiredDistance = isValve ? 3f : 2f;
         distance = Vector3.Distance(transform.position, Camera.main.transform.position);
         direction = transform.position - Camera.main.transform.position;
         angleView = Vector3.Angle(Camera.main.transform.forward, direction);
-        if (angleView < 45f && distance < 2f) return true;
+        if (angleView < 45f && distance < requiredDistance) return true;
         else return false;
+    }
+
+    bool NearViewFrom(GameObject interactor)
+    {
+        if (interactor == null)
+            return false;
+
+        Transform origin = interactor.transform;
+        PlayerMovement movement = interactor.GetComponent<PlayerMovement>()
+            ?? interactor.GetComponentInChildren<PlayerMovement>();
+        if (movement != null && movement.ViewTransform != null)
+            origin = movement.ViewTransform;
+
+        float requiredDistance = isValve ? 3f : 2f;
+        float promptDistance = Vector3.Distance(transform.position, origin.position);
+        Vector3 promptDirection = transform.position - origin.position;
+        float promptAngle = Vector3.Angle(origin.forward, promptDirection);
+        return promptAngle < 45f && promptDistance < requiredDistance;
+    }
+
+    bool UseLegacyInteraction()
+    {
+        return Object.FindFirstObjectByType<PlayerInteraction>() == null;
+    }
+
+    void TriggerDiscreteInteraction()
+    {
+        PlayButtonSound();
+
+        if (DoorObject != null && DoorObject.Remote)
+        {
+            DoorObject.Action();
+            if (isLever)
+            {
+                if (DoorObject.isOpened) anim.SetBool("LeverUp", true);
+                else anim.SetBool("LeverUp", false);
+            }
+            else anim.SetTrigger("ButtonPress");
+        }
+        else if (isLever)
+        {
+            anim.SetBool("LeverUp", !anim.GetBool("LeverUp"));
+        }
+        else
+        {
+            anim.SetTrigger("ButtonPress");
+        }
+
+        if (spikeTargets != null)
+        {
+            foreach (LeverSpikeTarget spike in spikeTargets)
+            {
+                if (spike != null) spike.Activate();
+            }
+        }
+
+        if (isLever)
+            LeverInteractionTriggered?.Invoke(this);
     }
 
     void PlayButtonSound()
@@ -179,8 +241,8 @@ public class AN_Button : MonoBehaviour
         if (audioSource == null || clip == null) return;
 
         audioSource.pitch = Random.Range(0.95f, 1.05f);
-        audioSource.PlayOneShot(clip, TempleAudio.ScaleSfxVolume(interactionVolume));
-        TempleAudio.PlaySfx(clip, interactionVolume);
+        audioSource.PlayOneShot(clip, 0.75f);
+        TempleAudio.PlaySfx(clip, 0.75f);
     }
 
     void LoadDefaultSound()
@@ -191,14 +253,4 @@ public class AN_Button : MonoBehaviour
             leverSound = TempleAudio.LoadClip("TempleAudio/SFX/clank1");
     }
 
-    void ConfigureAudioSource()
-    {
-        if (audioSource == null) return;
-
-        audioSource.spatialBlend = 1f;
-        audioSource.rolloffMode = AudioRolloffMode.Linear;
-        audioSource.minDistance = Mathf.Max(audioSource.minDistance, 1f);
-        audioSource.maxDistance = Mathf.Max(audioSource.maxDistance, 12f);
-        audioSource.playOnAwake = false;
-    }
 }

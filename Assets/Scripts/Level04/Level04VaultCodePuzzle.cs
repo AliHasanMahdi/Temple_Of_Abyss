@@ -4,6 +4,10 @@ using UnityEngine;
 
 public class Level04VaultCodePuzzle : MonoBehaviour
 {
+    const float ReleasedKeyDropKick = 0.65f;
+    const float ReleasedKeyDropOffset = 0.08f;
+    const float ReleasedKeyOutwardOffset = 0.12f;
+
     [Header("References")]
     [SerializeField] TMP_Text[] slotTexts = new TMP_Text[5];
     [SerializeField] GameObject treasureChestObject;
@@ -218,19 +222,38 @@ public class Level04VaultCodePuzzle : MonoBehaviour
 
     void ReleaseDoorKey()
     {
-        if (releasedDoorKeyObject == null)
+        Transform mountedKeyTransform = releasedDoorKeyObject != null ? releasedDoorKeyObject.transform : null;
+        Transform sourceParent = mountedKeyTransform != null ? mountedKeyTransform.parent : null;
+        GameObject releasedKey = CreateReleasedDoorKeyInstance();
+        if (releasedKey == null)
             return;
 
-        if (detachReleasedKey)
-            releasedDoorKeyObject.transform.SetParent(null, true);
+        Transform keyTransform = releasedKey.transform;
+        Vector3 outwardDirection = Vector3.zero;
+        Collider[] sourceColliders = sourceParent != null
+            ? sourceParent.GetComponentsInChildren<Collider>(true)
+            : System.Array.Empty<Collider>();
+        Collider[] keyColliders = releasedKey.GetComponentsInChildren<Collider>(true);
+        if (sourceParent != null)
+        {
+            outwardDirection = keyTransform.position - sourceParent.position;
+            outwardDirection = Vector3.ProjectOnPlane(outwardDirection, Vector3.up).normalized;
+        }
 
-        Collider collider = releasedDoorKeyObject.GetComponent<Collider>();
+        if (detachReleasedKey)
+            keyTransform.SetParent(null, true);
+
+        keyTransform.position += Vector3.down * ReleasedKeyDropOffset;
+        if (outwardDirection.sqrMagnitude > 0.0001f)
+            keyTransform.position += outwardDirection * ReleasedKeyOutwardOffset;
+
+        Collider collider = releasedKey.GetComponent<Collider>();
         if (collider != null)
             collider.isTrigger = releasedKeyTrigger;
 
-        Rigidbody body = releasedDoorKeyObject.GetComponent<Rigidbody>();
+        Rigidbody body = releasedKey.GetComponent<Rigidbody>();
         if (body == null)
-            body = releasedDoorKeyObject.AddComponent<Rigidbody>();
+            body = releasedKey.AddComponent<Rigidbody>();
 
         body.isKinematic = releasedKeyIsKinematic;
         body.useGravity = releasedKeyUseGravity;
@@ -240,7 +263,72 @@ public class Level04VaultCodePuzzle : MonoBehaviour
             body.angularVelocity = Vector3.zero;
         }
         body.collisionDetectionMode = releasedKeyCollisionMode;
+        Physics.SyncTransforms();
         body.WakeUp();
+        IgnoreSourceDoorCollisions(keyColliders, sourceColliders);
+        if (!body.isKinematic)
+        {
+            Vector3 releaseVelocity = Vector3.down;
+            if (outwardDirection.sqrMagnitude > 0.0001f)
+                releaseVelocity += outwardDirection * 0.45f;
+
+            body.AddForce(releaseVelocity.normalized * ReleasedKeyDropKick, ForceMode.VelocityChange);
+        }
+    }
+
+    GameObject CreateReleasedDoorKeyInstance()
+    {
+        if (releasedDoorKeyObject == null)
+            return null;
+
+        Transform mountedKeyTransform = releasedDoorKeyObject.transform;
+        GameObject releasedKey = Instantiate(
+            releasedDoorKeyObject,
+            mountedKeyTransform.position,
+            mountedKeyTransform.rotation);
+
+        releasedKey.name = releasedDoorKeyObject.name;
+        releasedKey.transform.localScale = mountedKeyTransform.lossyScale;
+        DisableMountedDoorKey();
+        return releasedKey;
+    }
+
+    void DisableMountedDoorKey()
+    {
+        if (releasedDoorKeyObject == null)
+            return;
+
+        Collider[] colliders = releasedDoorKeyObject.GetComponentsInChildren<Collider>(true);
+        foreach (Collider collider in colliders)
+            collider.enabled = false;
+
+        Renderer[] renderers = releasedDoorKeyObject.GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer renderer in renderers)
+            renderer.enabled = false;
+
+        releasedDoorKeyObject.SetActive(false);
+    }
+
+    static void IgnoreSourceDoorCollisions(Collider[] keyColliders, Collider[] sourceColliders)
+    {
+        if (keyColliders == null || sourceColliders == null)
+            return;
+
+        for (int i = 0; i < keyColliders.Length; i++)
+        {
+            Collider keyCollider = keyColliders[i];
+            if (keyCollider == null)
+                continue;
+
+            for (int j = 0; j < sourceColliders.Length; j++)
+            {
+                Collider sourceCollider = sourceColliders[j];
+                if (sourceCollider == null || sourceCollider == keyCollider)
+                    continue;
+
+                Physics.IgnoreCollision(keyCollider, sourceCollider, true);
+            }
+        }
     }
 
     bool IsValidSlot(int slotIndex)

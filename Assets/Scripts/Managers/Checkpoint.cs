@@ -2,6 +2,7 @@
 
 public class Checkpoint : MonoBehaviour
 {
+    const int CheckpointScoreReward = 5;
     private bool isActivated = false;
 
     void OnTriggerEnter(Collider other)
@@ -9,6 +10,9 @@ public class Checkpoint : MonoBehaviour
         if (other.CompareTag("Player") && !isActivated)
         {
             isActivated = true;
+
+            if (HUDManager.Instance != null)
+                HUDManager.Instance.AddScore(CheckpointScoreReward);
 
             // Save everything — scene, position, inventory, score
             if (SaveSystem.Instance != null)

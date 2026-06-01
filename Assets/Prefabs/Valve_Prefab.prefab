@@ -43,6 +43,7 @@ GameObject:
   - component: {fileID: 4486920273599370618}
   - component: {fileID: 3892460804671490641}
   - component: {fileID: 4028874723192598727}
+  - component: {fileID: 1186419904477000000}
   - component: {fileID: 8025324976199497260}
   m_Layer: 0
   m_Name: Valve
@@ -141,6 +142,27 @@ MonoBehaviour:
   min: 0
   speed: 15
   valveBool: 1
+--- !u!65 &1186419904477000000
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4021467230806756047}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.8, y: 1.25, z: 0.8}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &5790873268593514898
 GameObject:
   m_ObjectHideFlags: 0
