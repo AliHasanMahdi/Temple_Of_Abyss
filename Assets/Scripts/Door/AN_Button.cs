@@ -143,11 +143,14 @@ public class AN_Button : MonoBehaviour, IPlayerInteractable
 
     public bool CanInteract(GameObject interactor)
     {
-        return enabled && gameObject.activeInHierarchy && !Locked && !isValve && NearViewFrom(interactor);
+        return enabled && gameObject.activeInHierarchy && !Locked && NearViewFrom(interactor);
     }
 
     public string GetPromptText()
     {
+        if (isValve)
+            return "Press E to turn valve";
+
         if (isLever)
             return "Press E to pull lever";
 
@@ -164,10 +167,11 @@ public class AN_Button : MonoBehaviour, IPlayerInteractable
 
     bool NearView() // it is true if you near interactive object
     {
+        float requiredDistance = isValve ? 3f : 2f;
         distance = Vector3.Distance(transform.position, Camera.main.transform.position);
         direction = transform.position - Camera.main.transform.position;
         angleView = Vector3.Angle(Camera.main.transform.forward, direction);
-        if (angleView < 45f && distance < 2f) return true;
+        if (angleView < 45f && distance < requiredDistance) return true;
         else return false;
     }
 
@@ -182,10 +186,11 @@ public class AN_Button : MonoBehaviour, IPlayerInteractable
         if (movement != null && movement.ViewTransform != null)
             origin = movement.ViewTransform;
 
+        float requiredDistance = isValve ? 3f : 2f;
         float promptDistance = Vector3.Distance(transform.position, origin.position);
         Vector3 promptDirection = transform.position - origin.position;
         float promptAngle = Vector3.Angle(origin.forward, promptDirection);
-        return promptAngle < 45f && promptDistance < 2f;
+        return promptAngle < 45f && promptDistance < requiredDistance;
     }
 
     bool UseLegacyInteraction()

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class Level04LeverSequenceWallUnlock : MonoBehaviour
 {
@@ -43,6 +44,9 @@ public class Level04LeverSequenceWallUnlock : MonoBehaviour
     [SerializeField] bool useCustomSequence;
     [SerializeField] bool[] customSequence;
     [SerializeField] bool[] generatedSequence;
+    [SerializeField] TMP_Text leverCountText;
+    [SerializeField] string leverCountCanvasName = "Canvas_levers";
+    [SerializeField] string leverCountObjectName = "e_leverscount";
 
     AN_Button[] levers;
     bool checkingEnabled = true;
@@ -54,6 +58,8 @@ public class Level04LeverSequenceWallUnlock : MonoBehaviour
 
         ResolveLevers();
         GenerateSequence();
+        ResolveLeverCountText();
+        UpdateLeverCountText();
     }
 
     void OnEnable()
@@ -140,6 +146,8 @@ public class Level04LeverSequenceWallUnlock : MonoBehaviour
 
             if (printSequenceToConsole)
                 Debug.Log("[Level04LeverSequenceWallUnlock] Sequence: " + BuildSequenceDebugString());
+
+            UpdateLeverCountText();
             return;
         }
 
@@ -157,6 +165,8 @@ public class Level04LeverSequenceWallUnlock : MonoBehaviour
 
         if (printSequenceToConsole)
             Debug.Log("[Level04LeverSequenceWallUnlock] Sequence: " + BuildSequenceDebugString());
+
+        UpdateLeverCountText();
     }
 
     void OnLeverInteractionTriggered(AN_Button lever)
@@ -353,5 +363,61 @@ public class Level04LeverSequenceWallUnlock : MonoBehaviour
             names[i] = levers[i] != null ? levers[i].transform.root.name : "(missing)";
 
         return string.Join(", ", names);
+    }
+
+    void ResolveLeverCountText()
+    {
+        if (leverCountText != null)
+            return;
+
+        GameObject textObject = GameObject.Find(leverCountObjectName);
+        if (textObject == null)
+        {
+            GameObject canvasObject = GameObject.Find(leverCountCanvasName);
+            if (canvasObject != null)
+            {
+                Transform child = canvasObject.transform.Find(leverCountObjectName);
+                if (child != null)
+                    textObject = child.gameObject;
+            }
+        }
+
+        if (textObject != null)
+            leverCountText = textObject.GetComponent<TMP_Text>();
+
+        if (leverCountText != null)
+            return;
+
+        TMP_Text[] texts = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            TMP_Text candidate = texts[i];
+            if (candidate == null || candidate.gameObject.name != leverCountObjectName)
+                continue;
+
+            Transform parent = candidate.transform.parent;
+            if (parent != null && parent.name == leverCountCanvasName)
+            {
+                leverCountText = candidate;
+                return;
+            }
+        }
+    }
+
+    void UpdateLeverCountText()
+    {
+        ResolveLeverCountText();
+        if (leverCountText == null || generatedSequence == null || generatedSequence.Length == 0)
+            return;
+
+        int onCount = 0;
+        for (int i = 0; i < generatedSequence.Length; i++)
+        {
+            if (generatedSequence[i])
+                onCount++;
+        }
+
+        int offCount = generatedSequence.Length - onCount;
+        leverCountText.text = "ON: " + onCount + " OFF: " + offCount;
     }
 }
